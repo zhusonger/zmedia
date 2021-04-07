@@ -65,6 +65,7 @@ allprojects {
 apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
 
+version = rootProject.ext.media
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion

@@ -4,22 +4,16 @@
 # 引入
 
 ```
-implementation 'cn.com.lasong:meida:latest.release'
+implementation 'com.github.zhusonger.androidz:meida:1.0.0'
 ```
 
-## v0.0.1
+## 1.0.0
 * 添加MP3编解码线程与播放器, 实现边解码边播放  
 * 添加双声道转单声道/单声道重采样/混音 动态库
 	* 基于SpeexDst实现重采样
 	* 后面有需要再引入降噪,增益等功能
-
-## v0.0.2
 * 把动态库加入到jniLibs
-
-## v0.0.3
 * 添加arm64-v8a支持
-
-## v0.0.4
 * 重采样修改为ffmpeg实现, 移除双声道转单声道接口, 通过ffmpeg的重采样可以实现相同功能
 
 ### 代码示例

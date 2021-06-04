@@ -56,7 +56,9 @@ resample.release();
     Mux muxer = new Muxer();
     // 开始与结束时间是s, double类型
     // 默认保留metadata和旋转信息, 可传入false关闭
-    int ret = muxer.remux(<input path>, <output path>, <start seconds>, <end seconds>, <metadata>, <rotate>);
+    int ret = muxer.remux(<input path>, <output path>,
+     <start seconds>, <end seconds>,
+     <metadata>, <rotate>);
     if (ret == 0) {
         // success
     } else {

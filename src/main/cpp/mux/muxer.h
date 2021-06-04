@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:     cn_com_lasong_media_Muxer
  * Method:    remux
- * Signature: (Ljava/lang/String;Ljava/lang/String;)V
+ * Signature: (Ljava/lang/String;Ljava/lang/String;DDZZ)I
  */
-JNIEXPORT int JNICALL Java_cn_com_lasong_media_Muxer_remux
-  (JNIEnv *, jclass, jstring, jstring);
+JNIEXPORT jint JNICALL Java_cn_com_lasong_media_Muxer_remux
+        (JNIEnv *, jobject, jstring, jstring, jdouble, jdouble, jboolean, jboolean);
 
 #ifdef __cplusplus
 }

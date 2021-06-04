@@ -5,11 +5,11 @@
 #ifndef ANDROIDZ_RESAMPLE_HELPER_H
 #define ANDROIDZ_RESAMPLE_HELPER_H
 
-#include <android/log.h>
 #include <libavutil/opt.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/samplefmt.h>
 #include <libswresample/swresample.h>
+#include "../util/helper.h"
 // 默认使用1024个采样点, 一般来说够用了
 // 双声道 s16le的音频就有4096个字节
 // 单声道 s16le的音频有2048个字节
@@ -18,15 +18,6 @@
 
 #define MAX_AUDIO_SIZE 32767
 #define MIN_AUDIO_SIZE -32768
-
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "NDK_LOG", __VA_ARGS__)
-#define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, "NDK_LOG", __VA_ARGS__)
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "NDK_LOG", __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "NDK_LOG", __VA_ARGS__)
-#define ASSERT(cond, fmt, ...)                                \
-  if (!(cond)) {                                              \
-    __android_log_assert(#cond, "AG_APM", fmt, ##__VA_ARGS__); \
-  }
 
 struct SwrContextExt {
     struct SwrContext *swr_ctx;

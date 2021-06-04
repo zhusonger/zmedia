@@ -1,5 +1,5 @@
 //
-// Created by YouXi on 2020/7/14.
+// Created by zhusong on 2020/7/14.
 //
 
 #ifndef ANDROIDZ_RESAMPLE_HELPER_H

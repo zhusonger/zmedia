@@ -12,7 +12,7 @@ import java.util.Collection;
  */
 public class MediaLog {
     private static final String TAG = "MediaLog";
-    private static int sLogLevel = Log.ERROR;
+    private static int sLogLevel = Log.ASSERT;
 
     public static void setLogLevel(int level) {
         sLogLevel = level;

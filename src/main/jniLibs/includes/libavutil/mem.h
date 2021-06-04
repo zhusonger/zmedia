@@ -33,6 +33,7 @@
 #include "attributes.h"
 #include "error.h"
 #include "avutil.h"
+#include "version.h"
 
 /**
  * @addtogroup lavu_mem
@@ -49,6 +50,10 @@
  * dealing with memory consistently possible on all platforms.
  *
  * @{
+ */
+
+#if FF_API_DECLARE_ALIGNED
+/**
  *
  * @defgroup lavu_mem_macros Alignment Macros
  * Helper macros for declaring aligned variables.
@@ -125,6 +130,7 @@
 /**
  * @}
  */
+#endif
 
 /**
  * @defgroup lavu_mem_attrs Function Attributes
@@ -668,11 +674,18 @@ void *av_dynarray2_add(void **tab_ptr, int *nb_ptr, size_t elem_size,
  */
 static inline int av_size_mult(size_t a, size_t b, size_t *r)
 {
-    size_t t = a * b;
+    size_t t;
+
+#if (!defined(__INTEL_COMPILER) && AV_GCC_VERSION_AT_LEAST(5,1)) || AV_HAS_BUILTIN(__builtin_mul_overflow)
+    if (__builtin_mul_overflow(a, b, &t))
+        return AVERROR(EINVAL);
+#else
+    t = a * b;
     /* Hack inspired from glibc: don't try the division if nelem and elsize
      * are both less than sqrt(SIZE_MAX). */
     if ((a | b) >= ((size_t)1 << (sizeof(size_t) * 4)) && a && t / a != b)
         return AVERROR(EINVAL);
+#endif
     *r = t;
     return 0;
 }

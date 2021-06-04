@@ -26,6 +26,18 @@ add_library(swresample
 set_target_properties(swresample
         PROPERTIES IMPORTED_LOCATION ${JNI_LIBS_DIR}/${ANDROID_ABI}/libswresample.so )
 
+add_library(avformat
+        SHARED
+        IMPORTED )
+set_target_properties(avformat
+        PROPERTIES IMPORTED_LOCATION ${JNI_LIBS_DIR}/${ANDROID_ABI}/libavformat.so )
+
+add_library(avcodec
+        SHARED
+        IMPORTED )
+set_target_properties(avcodec
+        PROPERTIES IMPORTED_LOCATION ${JNI_LIBS_DIR}/${ANDROID_ABI}/libavcodec.so )
+
 # 引入头文件
 include_directories( ${JNI_LIBS_DIR}/includes)
 
@@ -43,6 +55,14 @@ add_library( # 设置库的名称
         resample/resample_helper.c
         )
 
+add_library(# 设置库的名称
+        mux
+        # 将库设置为共享库。
+        SHARED
+        # 为源文件提供一个相对路径。
+        mux/muxer.c
+)
+
 # 搜索指定预先构建的库和存储路径变量。因为CMake包括系统库搜索路径中默认情况下,只需要指定想添加公共NDK库的名称，在CMake验证库之前存在完成构建
 find_library( # 设置path变量的名称
         log-lib
@@ -53,4 +73,11 @@ target_link_libraries( # 指定目标库
         resample
         # 目标库到日志库的链接 包含在NDK
         avutil swresample
+        ${log-lib})
+
+# 指定库CMake应该链接到目标库中，可以链接多个库，比如定义库，构建脚本，预先构建的第三方库或者系统库
+target_link_libraries( # 指定目标库
+        mux
+        # 目标库到日志库的链接 包含在NDK
+        avutil avformat avcodec
         ${log-lib})

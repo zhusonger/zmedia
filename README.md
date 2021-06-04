@@ -46,8 +46,25 @@ resample.release();
 
 ```
 
+## 1.1.0
 
-# 错误码值
+* 新增视频/音乐剪辑功能
+
+### 代码示例
+
+```java
+Mux muxer = new Muxer();
+// 开始与结束时间是s, double类型
+// 默认保留metadata和旋转信息, 可传入false关闭
+int ret = muxer.remux(<input path>, <output path>, <start seconds>, <end seconds>, <metadata>, <rotate>);
+if (ret == 0) {
+    // success
+} else {
+    // error
+}
+```
+
+### 失败错误码
 AVERROR_BSF_NOT_FOUND = -1179861752
 AVERROR_BUG = -558323010
 AVERROR_DECODER_NOT_FOUND = -1128613112
@@ -64,5 +81,3 @@ AVERROR_PROTOCOL_NOT_FOUND = -1330794744
 AVERROR_STREAM_NOT_FOUND = -1381258232
 AVERROR_BUG2 = -541545794
 AVERROR_UNKNOWN = -1313558101
-
-https://www.programmersought.com/article/4900920874/

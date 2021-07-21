@@ -5,26 +5,20 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioRecordingConfiguration;
 import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Build;
-import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Message;
-
-import androidx.annotation.NonNull;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import cn.com.lasong.media.MediaLog;
-
-import static android.media.MediaCodecList.REGULAR_CODECS;
 
 /**
  * Author: zhusong
@@ -157,7 +151,7 @@ public class AudioRecorder {
         this.record = record;
         // Android 10(API 29)开始优先级原则, 可能会被静默处理, 添加回调监听
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            record.registerAudioRecordingCallback(null, new AudioManager.AudioRecordingCallback() {
+            record.registerAudioRecordingCallback(Executors.newSingleThreadExecutor(), new AudioManager.AudioRecordingCallback() {
                 @Override
                 public void onRecordingConfigChanged(List<AudioRecordingConfiguration> configs) {
                     super.onRecordingConfigChanged(configs);

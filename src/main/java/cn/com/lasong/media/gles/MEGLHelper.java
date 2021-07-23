@@ -6,7 +6,11 @@ import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
 import android.opengl.EGLExt;
 import android.opengl.EGLSurface;
+import android.opengl.GLES11Ext;
+import android.opengl.GLES20;
 import android.view.Surface;
+
+import androidx.annotation.NonNull;
 
 import cn.com.lasong.media.MediaLog;
 
@@ -183,9 +187,17 @@ public class MEGLHelper {
 
     /*设置窗口surface*/
     public boolean setSurface(Surface surface) {
-        if (isInitialized) {
+        if (!isInitialized) {
             return false;
         }
+        // 销毁之前的surface
+        if (null != mEglSurface && null != mEglDisplay) {
+            EGL14.eglMakeCurrent(mEglDisplay, EGL14.EGL_NO_SURFACE,
+                    EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT);
+            EGL14.eglDestroySurface(mEglDisplay, mEglSurface);
+            mEglSurface = null;
+        }
+        // 创建surface
         int[] attrib_list = { EGL14.EGL_NONE };
         mEglSurface = EGL14.eglCreateWindowSurface(mEglDisplay, mEglConfig, surface,
                 attrib_list, 0);
@@ -219,9 +231,53 @@ public class MEGLHelper {
         isInitialized = false;
     }
 
+    /*创建OES纹理*/
+    public static @NonNull int[] glGenOesTexture(int count) {
+        int[] textures = new int[count];
+        GLES20.glGenTextures(count, textures, 0);
+        for (int i = 0; i < count; i++) {
+            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textures[i]);
+            checkError("glBindTexture OES");
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+                    GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+                    GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+                    GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+                    GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+        }
+        return textures;
+    }
+
+    /*创建2D纹理*/
+    public static @NonNull int[] glGen2DTexture(int count) {
+        int[] textures = new int[count];
+        GLES20.glGenTextures(count, textures, 0);
+        for (int i = 0; i < count; i++) {
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textures[i]);
+            checkError("glBindTexture 2D");
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,
+                    GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,
+                    GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,
+                    GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D,
+                    GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+        }
+        return textures;
+    }
+
     /*打印错误*/
-    private void checkError() {
+    public static void checkError() {
+        checkError(null);
+    }
+    public static void checkError(String message) {
         int errorCode = EGL14.eglGetError();
+        if (errorCode != EGL14.EGL_SUCCESS && null != message) {
+            MediaLog.e(message);
+        }
         switch (errorCode) {
             case EGL14.EGL_NOT_INITIALIZED:
                 MediaLog.e("对于特定的 Display, EGL 未初始化，或者不能初始化---没有初始化");

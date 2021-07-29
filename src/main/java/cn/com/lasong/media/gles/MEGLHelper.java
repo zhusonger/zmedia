@@ -1,16 +1,28 @@
 package cn.com.lasong.media.gles;
 
+import android.graphics.Bitmap;
 import android.opengl.EGL14;
 import android.opengl.EGLConfig;
 import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
 import android.opengl.EGLExt;
 import android.opengl.EGLSurface;
+import android.opengl.GLES10;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.opengl.GLES30;
+import android.opengl.GLUtils;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
+
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
+import java.util.Locale;
 
 import cn.com.lasong.media.MediaLog;
 
@@ -22,6 +34,8 @@ import cn.com.lasong.media.MediaLog;
  * EGL14 辅助类
  */
 public class MEGLHelper {
+
+    private static final String TAG = "MEGLHelper";
 
     static final int EGL_RECORDABLE_ANDROID = 0x3142;
 
@@ -46,6 +60,9 @@ public class MEGLHelper {
 
     boolean isInitialized = false;
 
+    static final int SHORT_SIZE = Short.SIZE / Byte.SIZE;
+    static final int INT_SIZE = Integer.SIZE / Byte.SIZE;
+    static final int FLOAT_SIZE = Float.SIZE / Byte.SIZE;
     /**
      * 获取EGLHelper实例
      * @return 不成功返回null
@@ -56,7 +73,7 @@ public class MEGLHelper {
             helper.init(3, true);
             return helper;
         } catch (Exception e) {
-            MediaLog.e(e);
+            MediaLog.e(TAG, e);
             helper.release();
         }
 
@@ -64,7 +81,7 @@ public class MEGLHelper {
             helper.init(2, true);
             return helper;
         } catch (Exception e) {
-            MediaLog.e(e);
+            MediaLog.e(TAG, e);
             helper.release();
         }
         return null;
@@ -201,7 +218,7 @@ public class MEGLHelper {
         int[] attrib_list = { EGL14.EGL_NONE };
         mEglSurface = EGL14.eglCreateWindowSurface(mEglDisplay, mEglConfig, surface,
                 attrib_list, 0);
-        if (mEglSurface == EGL14.EGL_NO_SURFACE) {
+        if (null == mEglSurface || mEglSurface == EGL14.EGL_NO_SURFACE) {
             checkError();
             return false;
         }
@@ -210,6 +227,14 @@ public class MEGLHelper {
             return false;
         }
         return true;
+    }
+
+    /*设置时间戳(纳秒)并交换缓冲*/
+    public void swapBuffer(long presentationTime) {
+        if (null != mEglDisplay && null != mEglSurface) {
+            EGLExt.eglPresentationTimeANDROID(mEglDisplay, mEglSurface, presentationTime);
+            EGL14.eglSwapBuffers(mEglDisplay, mEglSurface);
+        }
     }
 
     /*释放资源*/
@@ -229,6 +254,10 @@ public class MEGLHelper {
             mEglDisplay = null;
         }
         isInitialized = false;
+    }
+
+    public int getGlVersion() {
+        return glVersion;
     }
 
     /*创建OES纹理*/
@@ -267,6 +296,193 @@ public class MEGLHelper {
                     GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
         }
         return textures;
+    }
+
+    /**
+     * 绑定2D纹理
+     * @param texture
+     * @param watermark
+     */
+    public static void glBindTexture2D(int texture, Bitmap watermark) {
+        if (null == watermark) {
+            return;
+        }
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture);
+        checkError("glBindTexture " + texture);
+        GLUtils.texImage2D(GLES10.GL_TEXTURE_2D, 0, watermark, 0);
+        checkError("texImage2D " + watermark);
+    }
+
+    /**
+     * 加载shader
+     * 这个函数的输出是一个非负数字
+     * 用于指定返回的 shader object
+     * 当创建失败的话,返回 0
+     * */
+    public static int loadShader(int type, String shaderCode) {
+        // create a vertex shader type (GLES20.GL_VERTEX_SHADER)
+        // or a fragment shader type (GLES20.GL_FRAGMENT_SHADER)
+        int shader = GLES20.glCreateShader(type);
+        if (shader != 0) {
+            GLES20.glShaderSource(shader, shaderCode);
+            GLES20.glCompileShader(shader);
+            int[] compiled = new int[1];
+            GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compiled, 0);
+            if (compiled[0] == 0) {
+                String info = GLES20.glGetShaderInfoLog(shader);
+                GLES20.glDeleteShader(shader);
+                shader = 0;
+                MediaLog.e(TAG, String.format(Locale.getDefault(), "Could not compile shader %d : %s", type, info));
+            }
+        }
+        return shader;
+    }
+
+    /**
+     * 创建program
+     * 这个函数的输出是一个非负整数
+     * 用于指定返回的 program object
+     * 当创建失败的话,返回 0
+     * */
+    public static int createProgram(String vertexShaderCode, String fragmentShaderCode) {
+        int vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode);
+        if (vertexShader == 0) {
+            return 0;
+        }
+        int fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode);
+        if (fragmentShader == 0) {
+            return 0;
+        }
+        int program = GLES20.glCreateProgram();
+        if (program != 0) {
+            GLES20.glAttachShader(program, vertexShader);
+            checkError("glAttachShader");
+            GLES20.glAttachShader(program, fragmentShader);
+            checkError("glAttachShader");
+            GLES20.glLinkProgram(program);
+            int[] status = new int[1];
+            GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, status, 0);
+            if (status[0] != GLES20.GL_TRUE) {
+                String info = GLES20.glGetProgramInfoLog(program);
+                GLES20.glDeleteProgram(program);
+                program = 0;
+                MediaLog.e(TAG, "Could not create program : " + info);
+            }
+        }
+        return program;
+    }
+
+    /**
+     * 删除程序
+     * @param program
+     */
+    public static void glDeleteProgram(int program) {
+        if (program != 0) {
+            GLES20.glDeleteProgram(program);
+            checkError("glDeleteProgram : " + program);
+        }
+    }
+
+    /**
+     * 删除buffer
+     * @param buffers
+     */
+    public static void glDeleteBuffers(int[] buffers) {
+        if (null != buffers) {
+            GLES20.glDeleteBuffers(buffers.length, buffers, 0);
+        }
+    }
+
+    /**
+     * 删除纹理
+     * @param textures
+     */
+    public static void glDeleteTextures(int[] textures) {
+        if (null == textures || textures.length == 0) {
+            return;
+        }
+        GLES20.glDeleteTextures(textures.length, textures, 0);
+    }
+
+    /**
+     * 生成本地堆内存Float数组
+     * @param data
+     * @return
+     */
+    public static FloatBuffer allocateFloatBuffer(float[] data) {
+        FloatBuffer buffer = ByteBuffer.allocateDirect(data.length * FLOAT_SIZE)
+                .order(ByteOrder.nativeOrder()).asFloatBuffer();
+        buffer.put(data);
+        buffer.position(0);
+        return buffer;
+    }
+
+    /**
+     * 生成本地堆内存Int数组
+     * @param data
+     * @return
+     */
+    public static IntBuffer allocateIntBuffer(int[] data) {
+        IntBuffer buffer = ByteBuffer.allocateDirect(data.length * INT_SIZE)
+                .order(ByteOrder.nativeOrder()).asIntBuffer();
+        buffer.put(data);
+        buffer.position(0);
+        return buffer;
+    }
+
+    /**
+     * 生成本地堆内存Short数组
+     * @param data
+     * @return
+     */
+    public static ShortBuffer allocateShortBuffer(short[] data) {
+        ShortBuffer buffer = ByteBuffer.allocateDirect(data.length * SHORT_SIZE)
+                .order(ByteOrder.nativeOrder()).asShortBuffer();
+        buffer.put(data);
+        buffer.position(0);
+        return buffer;
+    }
+
+    /**
+     * 绑定VBO/EBO数据
+     * @param buffer
+     * @param data
+     * @param usage
+     */
+    public static void glBufferData(int target, int buffer, Buffer data, int sizeBytes, int usage) {
+        // 1 绑定到顶点坐标数据缓冲
+        GLES20.glBindBuffer(target, buffer);
+        // 2.向顶点坐标数据缓冲送入数据
+        GLES30.glBufferData(target, data.capacity() * sizeBytes,
+                data, usage);
+        // 清除data释放空间
+        data.limit(0);
+    }
+
+    /**
+     * 绑定顶点数据
+     * @param buffer
+     * @param data
+     * @param usage
+     */
+    public static void glBindVertexBufferData(int buffer, Buffer data, int usage) {
+        if (!(data instanceof FloatBuffer)) {
+            throw new IllegalArgumentException("vertex data is float array");
+        }
+        glBufferData(GLES20.GL_ARRAY_BUFFER, buffer, data, FLOAT_SIZE, usage);
+    }
+
+    /**
+     * 绑定索引数据
+     * @param buffer
+     * @param data
+     * @param usage
+     */
+    public static void glBindElementBufferData(int buffer, Buffer data, int usage) {
+        if (!(data instanceof ShortBuffer)) {
+            throw new IllegalArgumentException("element data is short array");
+        }
+        glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, buffer, data, SHORT_SIZE, usage);
     }
 
     /*打印错误*/

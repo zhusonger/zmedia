@@ -4,14 +4,9 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioRecordingConfiguration;
-import android.media.MediaCodec;
-import android.media.MediaCodecList;
-import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Build;
-import android.os.HandlerThread;
 
-import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -76,7 +71,7 @@ public class AudioRecorder {
      * 录音参数构造器
      */
     public static class Builder {
-        private int audioSource = MediaRecorder.AudioSource.VOICE_COMMUNICATION; // VoIP通话录音
+        private int audioSource = MediaRecorder.AudioSource.DEFAULT; // VoIP通话录音
         private int sampleRateInHz = 44100; //44.1KHz
         private int channelConfig = AudioFormat.CHANNEL_IN_MONO; // mono 单声道
         private int audioFormat = AudioFormat.ENCODING_PCM_16BIT; // 位深 16位/2byte/-32768 ~ 32767
@@ -138,15 +133,12 @@ public class AudioRecorder {
     private volatile AudioRecord record;
     // 录制参数构造对象, 便于暂停恢复的处理
     private volatile Builder builder;
-    // 系统自带编码器
-    private MediaCodec encoder;
-    // 线程
-    private HandlerThread handlerThread;
+
     /**
      * 开始录制音频
      * @param record 音频录制系统类
      */
-    private void start(AudioRecord record) {
+    private boolean start(AudioRecord record) {
         stop(EVENT_INTERRUPT);
         this.record = record;
         // Android 10(API 29)开始优先级原则, 可能会被静默处理, 添加回调监听
@@ -177,46 +169,26 @@ public class AudioRecorder {
         } catch (Exception e) {
             MediaLog.e(e);
             stop(EVENT_START_FAIL);
-            return;
+            return false;
         }
-
-        stopThread();
-        handlerThread = new HandlerThread("AudioRecorder");
-        handlerThread.start();
-
-        handlerThread.getLooper();
+        return true;
     }
 
-    public void start(Builder builder) {
+    public boolean start(Builder builder) {
         if (null == builder) {
-            return;
+            return false;
         }
         registerListener(builder.audioListener);
         AudioRecord record = builder.build();
         if (null == record) {
             notifyListeners(EVENT_INIT_FAIL);
-            return;
-        }
-        // encoder start
-        MediaFormat format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, builder.sampleRateInHz,
-                builder.audioFormat == AudioFormat.CHANNEL_IN_MONO ? 1 : 2);
-        MediaCodecList codecList = new MediaCodecList(MediaCodecList.REGULAR_CODECS);
-        String codeName = codecList.findEncoderForFormat(format);
-        try {
-            encoder = MediaCodec.createByCodecName(codeName);
-            encoder.start();
-        } catch (IOException e) {
-            MediaLog.e(e);
-            notifyListeners(EVENT_INIT_FAIL);
-            return;
+            return false;
         }
 
         // 初始化成功
         notifyListeners(EVENT_INITIALIZED);
         this.builder = builder;
-        start(record);
-
-
+        return start(record);
     }
     /**
      * 关闭录音
@@ -263,16 +235,6 @@ public class AudioRecorder {
         return null != record
                 && record.getState() == AudioRecord.STATE_INITIALIZED
                 && record.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING;
-    }
-
-    /**
-     * 关闭线程
-     */
-    private void stopThread() {
-        if (null != handlerThread) {
-            handlerThread.quit();
-            handlerThread = null;
-        }
     }
 
 

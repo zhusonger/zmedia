@@ -7,6 +7,7 @@ import android.media.AudioRecordingConfiguration;
 import android.media.MediaRecorder;
 import android.os.Build;
 
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -104,7 +105,7 @@ public class AudioRecorder {
         public AudioRecord build() {
             AudioRecord recorder = null;
             try {
-                int minBuffSize = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat);
+                int minBuffSize = getBufferSize(sampleRateInHz, channelConfig, audioFormat);
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                     recorder = new AudioRecord.Builder()
                             .setAudioSource(audioSource)
@@ -113,14 +114,14 @@ public class AudioRecorder {
                                     .setSampleRate(sampleRateInHz)
                                     .setChannelMask(channelConfig)
                                     .build())
-                            .setBufferSizeInBytes(2 * minBuffSize)
+                            .setBufferSizeInBytes(minBuffSize)
                             .build();
                 } else {
                     recorder = new AudioRecord(audioSource,
                             sampleRateInHz,
                             channelConfig,
                             audioFormat,
-                            2 * minBuffSize);
+                            minBuffSize);
                 }
             } catch (Exception e) {
                 MediaLog.e(e);
@@ -237,6 +238,18 @@ public class AudioRecorder {
                 && record.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING;
     }
 
+    /**
+     * 读取录音数据
+     * @param buffer
+     * @param remaining
+     * @return
+     */
+    public int read(ByteBuffer buffer, int remaining) {
+        if (null != buffer && null != record) {
+            return record.read(buffer, remaining);
+        }
+        return 0;
+    }
 
     /** register & unregister listeners
      *  handle events from recorder
@@ -297,5 +310,25 @@ public class AudioRecorder {
             return listener.onFinish();
         }
         return false;
+    }
+
+
+    /**
+     * 获取录音buffer大小
+     * @param sampleRateInHz 采样率
+     * @param channelConfig 声道： 如CHANNEL_IN_MONO
+     * @param audioFormat 采样数据格式: ENCODING_PCM_16BIT
+     * @param frameBufferUnit 每帧buffer大小的基础单元, 都是他的整数倍
+     * @return
+     */
+    public static int getBufferSize(int sampleRateInHz, int channelConfig, int audioFormat, int frameBufferUnit) {
+        int minBufferSize = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat);
+        return (int) Math.ceil((float) minBufferSize / frameBufferUnit) * frameBufferUnit;
+    }
+    public static int getBufferSize(int sampleRateInHz, int channelConfig, int frameBufferUnit) {
+        return getBufferSize(sampleRateInHz, channelConfig, AudioFormat.ENCODING_PCM_16BIT, frameBufferUnit);
+    }
+    public static int getBufferSize(int sampleRateInHz, int channelConfig) {
+        return getBufferSize(sampleRateInHz, channelConfig, AudioFormat.ENCODING_PCM_16BIT, 2048);
     }
 }

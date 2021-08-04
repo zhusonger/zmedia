@@ -60,9 +60,9 @@ public class MEGLHelper {
 
     boolean isInitialized = false;
 
-    static final int SHORT_SIZE = Short.SIZE / Byte.SIZE;
-    static final int INT_SIZE = Integer.SIZE / Byte.SIZE;
-    static final int FLOAT_SIZE = Float.SIZE / Byte.SIZE;
+    public static final int SHORT_SIZE = Short.SIZE / Byte.SIZE;
+    public static final int INT_SIZE = Integer.SIZE / Byte.SIZE;
+    public static final int FLOAT_SIZE = Float.SIZE / Byte.SIZE;
     /**
      * 获取EGLHelper实例
      * @return 不成功返回null

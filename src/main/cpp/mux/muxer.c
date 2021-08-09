@@ -139,7 +139,6 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
             LOGE("Error seek\n");
             goto end;
         }
-        avformat_flush(ifmt_ctx);
     }
 
     while (1) {
@@ -176,25 +175,10 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
             break;
         }
         /* copy packet */
-        if (pkt.stream_index == 0) {
-            LOGE("Frame: pts = %ld, dts = %ld, pts/s = %f, dts/s = %f,  %d,%d,%d,%d, %ld,\n", pkt.pts, pkt.dts,
-                 (pkt.pts * av_q2d(in_stream->time_base)), (pkt.dts * av_q2d(in_stream->time_base)),
-                         (in_stream->time_base.num),(in_stream->time_base.den),
-                     (out_stream->time_base.num),(out_stream->time_base.den),
-                 start_from[pkt.stream_index]);
-        }
-
         pkt.pts = av_rescale_q_rnd(pkt.pts - start_from[pkt.stream_index], in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
         pkt.dts = av_rescale_q_rnd(pkt.dts - start_from[pkt.stream_index], in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
         pkt.duration = av_rescale_q(pkt.duration, in_stream->time_base, out_stream->time_base);
         pkt.pos = -1;
-
-        if (pkt.stream_index == 0) {
-            LOGE("Frame1: pts = %ld, dts = %ld, pts/s = %f, dts/s = %f, %ld\n", pkt.pts,
-                 pkt.dts,
-                 (pkt.pts * av_q2d(in_stream->time_base)), (pkt.dts * av_q2d(in_stream->time_base)),
-                 start_from[pkt.stream_index]);
-        }
         // AVPacket 中 pts 必须大于或等于dts， 否则就返回-22 错误, B帧正好是pts < dts
         ret = av_interleaved_write_frame(ofmt_ctx, &pkt);
         if (ret < 0) {

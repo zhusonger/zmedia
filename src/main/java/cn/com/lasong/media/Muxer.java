@@ -1,7 +1,5 @@
 package cn.com.lasong.media;
 
-import java.nio.ByteBuffer;
-
 /**
  * Author: zhusong
  * Email: song.zhu@lasong.com.cn
@@ -23,10 +21,11 @@ public class Muxer {
      * @param end 结束的时候, 单位秒, <=0 表示到结尾
      * @param metadata 是否保留metadata
      * @param rotate 是否保留旋转信息
+     * @param startKeyFrame 是否从关键帧开始, 关键帧可能不在准确的时间, 但是画面可以确切的解析, 非关键帧在准确的时间, 但是画面会不全
      * @return 返回值, 0表示成功, 其他值表示失败
      */
-    public native int remux(String input, String output, double start, double end, boolean metadata, boolean rotate);
+    public native int remux(String input, String output, double start, double end, boolean metadata, boolean rotate, boolean startKeyFrame);
     public int remux(String input, String output, double start, double end) {
-        return remux(input, output, start, end, true, true);
+        return remux(input, output, start, end, true, true, true);
     }
 }

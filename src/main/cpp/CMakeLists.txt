@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.4.1)
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -s")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
 
-# 添加ffmpeg重采样库
+# 添加ffmpeg相关库
 set(JNI_LIBS_DIR ${CMAKE_SOURCE_DIR}/../jniLibs)
 message ("JNI_LIBS_DIR=${JNI_LIBS_DIR}")
 

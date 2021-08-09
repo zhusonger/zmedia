@@ -7,16 +7,15 @@
 #include <libavformat/avformat.h>
 #include <jni.h>
 #include "../util/helper.h"
-
 JNIEXPORT int JNICALL
-Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, jstring output, jdouble start, jdouble end, jboolean metadata, jboolean rotate) {
+Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, jstring output, jdouble start, jdouble end, jboolean metadata, jboolean rotate, jboolean start_key) {
 
     if (start < 0 && end <=0) {
         LOGE("timestamp is invalid");
         return -1;
     }
 
-    if (start >= end) {
+    if (end > 0 && start >= end) {
         LOGE("start timestamp must less than end");
         return -1;
     }
@@ -36,6 +35,8 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
     int stream_index = 0;
     int *stream_mapping = NULL;
     int stream_mapping_size = 0;
+    // 记录跳帧的起始时间, 用于后面的帧调整时间戳
+    int64_t *start_from = NULL;
 
     in_filename  = (*env)->GetStringUTFChars(env, input, 0);
     out_filename = (*env)->GetStringUTFChars(env, output, 0);
@@ -61,7 +62,9 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
 
     stream_mapping_size = ifmt_ctx->nb_streams;
     stream_mapping = av_mallocz_array(stream_mapping_size, sizeof(*stream_mapping));
-    if (!stream_mapping) {
+    start_from = av_mallocz_array(stream_mapping_size, sizeof(*start_from));
+    if (!stream_mapping || !start_from) {
+        LOGE("av_mallocz_array error");
         ret = AVERROR(ENOMEM);
         goto end;
     }
@@ -81,7 +84,7 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
         }
 
         stream_mapping[i] = stream_index++;
-
+        start_from[stream_mapping[i]] = INT16_MIN;
         out_stream = avformat_new_stream(ofmt_ctx, NULL);
         if (!out_stream) {
             LOGE("Failed allocating output stream\n");
@@ -94,8 +97,8 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
             LOGE("Failed to copy codec parameters\n");
             goto end;
         }
+        out_stream->time_base = in_stream->time_base;
         out_stream->codecpar->codec_tag = 0;
-
         // 拷贝metadata
         if (metadata) {
             av_dict_copy(&out_stream->metadata, in_stream->metadata, AV_DICT_DONT_OVERWRITE);
@@ -131,26 +134,23 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
     }
 
     if (start > 0) {
-        ret = av_seek_frame(ifmt_ctx, -1, start * AV_TIME_BASE, AVSEEK_FLAG_ANY);
+        ret = av_seek_frame(ifmt_ctx, -1, start * AV_TIME_BASE, start_key ? AVSEEK_FLAG_BACKWARD : AVSEEK_FLAG_ANY);
         if (ret < 0) {
             LOGE("Error seek\n");
             goto end;
         }
+        avformat_flush(ifmt_ctx);
     }
-
-    // 记录跳帧的其实时间, 用于后面的帧调整时间戳
-    int64_t *dts_start_from = malloc(sizeof(int64_t) * ifmt_ctx->nb_streams);
-    memset(dts_start_from, 0, sizeof(int64_t) * ifmt_ctx->nb_streams);
-    int64_t *pts_start_from = malloc(sizeof(int64_t) * ifmt_ctx->nb_streams);
-    memset(pts_start_from, 0, sizeof(int64_t) * ifmt_ctx->nb_streams);
 
     while (1) {
         AVStream *in_stream, *out_stream;
 
         ret = av_read_frame(ifmt_ctx, &pkt);
         // 没有数据, 退出
-        if (ret < 0)
+        if (ret < 0) {
+            ret = 0;
             break;
+        }
 
         in_stream  = ifmt_ctx->streams[pkt.stream_index];
         if (pkt.stream_index >= stream_mapping_size ||
@@ -159,11 +159,12 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
             continue;
         }
 
-        if (dts_start_from[pkt.stream_index] == 0) {
-            dts_start_from[pkt.stream_index] = pkt.dts;
-        }
-        if (pts_start_from[pkt.stream_index] == 0) {
-            pts_start_from[pkt.stream_index] = pkt.pts;
+        // 记录的时间出现负数可能是为了保证dts <= pts, 因为解码肯定要在显示之前
+        if (start_from[pkt.stream_index] == INT16_MIN) {
+            int64_t dts = pkt.dts;
+            int64_t pts = pkt.pts;
+            int64_t min_ts = dts > pts ? pts : dts;
+            start_from[pkt.stream_index] = min_ts < 0 ? 0 : min_ts;
         }
 
         pkt.stream_index = stream_mapping[pkt.stream_index];
@@ -175,30 +176,37 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
             break;
         }
         /* copy packet */
-        pkt.pts = av_rescale_q_rnd(pkt.pts - pts_start_from[pkt.stream_index], in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
-        pkt.dts = av_rescale_q_rnd(pkt.dts - dts_start_from[pkt.stream_index], in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
-        if (pkt.pts < 0) {
-            pkt.pts = 0;
+        if (pkt.stream_index == 0) {
+            LOGE("Frame: pts = %ld, dts = %ld, pts/s = %f, dts/s = %f,  %d,%d,%d,%d, %ld,\n", pkt.pts, pkt.dts,
+                 (pkt.pts * av_q2d(in_stream->time_base)), (pkt.dts * av_q2d(in_stream->time_base)),
+                         (in_stream->time_base.num),(in_stream->time_base.den),
+                     (out_stream->time_base.num),(out_stream->time_base.den),
+                 start_from[pkt.stream_index]);
         }
-        if (pkt.dts < 0) {
-            pkt.dts = 0;
-        }
+
+        pkt.pts = av_rescale_q_rnd(pkt.pts - start_from[pkt.stream_index], in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+        pkt.dts = av_rescale_q_rnd(pkt.dts - start_from[pkt.stream_index], in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
         pkt.duration = av_rescale_q(pkt.duration, in_stream->time_base, out_stream->time_base);
         pkt.pos = -1;
 
+        if (pkt.stream_index == 0) {
+            LOGE("Frame1: pts = %ld, dts = %ld, pts/s = %f, dts/s = %f, %ld\n", pkt.pts,
+                 pkt.dts,
+                 (pkt.pts * av_q2d(in_stream->time_base)), (pkt.dts * av_q2d(in_stream->time_base)),
+                 start_from[pkt.stream_index]);
+        }
+        // AVPacket 中 pts 必须大于或等于dts， 否则就返回-22 错误, B帧正好是pts < dts
         ret = av_interleaved_write_frame(ofmt_ctx, &pkt);
         if (ret < 0) {
-            LOGE("Error muxing packet\n");
+            LOGE("Error muxing packet :%d\n", ret);
             break;
         }
         av_packet_unref(&pkt);
     }
-    free(dts_start_from);
-    free(pts_start_from);
-
     av_write_trailer(ofmt_ctx);
     end:
 
+    free(start_from);
     avformat_close_input(&ifmt_ctx);
 
     /* close output */

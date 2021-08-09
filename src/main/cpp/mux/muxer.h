@@ -13,7 +13,7 @@ extern "C" {
  * Signature: (Ljava/lang/String;Ljava/lang/String;DDZZ)I
  */
 JNIEXPORT jint JNICALL Java_cn_com_lasong_media_Muxer_remux
-        (JNIEnv *, jobject, jstring, jstring, jdouble, jdouble, jboolean, jboolean);
+        (JNIEnv *, jobject, jstring, jstring, jdouble, jdouble, jboolean, jboolean, jboolean);
 
 #ifdef __cplusplus
 }

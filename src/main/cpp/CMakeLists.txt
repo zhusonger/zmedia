@@ -38,6 +38,11 @@ add_library(avcodec
 set_target_properties(avcodec
         PROPERTIES IMPORTED_LOCATION ${JNI_LIBS_DIR}/${ANDROID_ABI}/libavcodec.so )
 
+add_library(swscale
+        SHARED
+        IMPORTED )
+set_target_properties(swscale
+        PROPERTIES IMPORTED_LOCATION ${JNI_LIBS_DIR}/${ANDROID_ABI}/libswscale.so )
 # 引入头文件
 include_directories( ${JNI_LIBS_DIR}/includes)
 
@@ -61,6 +66,7 @@ add_library(# 设置库的名称
         SHARED
         # 为源文件提供一个相对路径。
         mux/muxer.c
+        mux/muxing.c
 )
 
 # 搜索指定预先构建的库和存储路径变量。因为CMake包括系统库搜索路径中默认情况下,只需要指定想添加公共NDK库的名称，在CMake验证库之前存在完成构建
@@ -79,5 +85,5 @@ target_link_libraries( # 指定目标库
 target_link_libraries( # 指定目标库
         mux
         # 目标库到日志库的链接 包含在NDK
-        avutil avformat avcodec
+        avutil avformat avcodec swscale
         ${log-lib})

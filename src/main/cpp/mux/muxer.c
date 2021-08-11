@@ -7,8 +7,10 @@
 #include <libavformat/avformat.h>
 #include <jni.h>
 #include "../util/helper.h"
+#include "muxing.h"
+
 JNIEXPORT int JNICALL
-Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, jstring output, jdouble start, jdouble end, jboolean metadata, jboolean rotate, jboolean start_key) {
+Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jclass clz, jstring input, jstring output, jdouble start, jdouble end, jboolean metadata, jboolean rotate, jboolean start_key) {
 
     if (start < 0 && end <=0) {
         LOGE("timestamp is invalid");
@@ -23,7 +25,8 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
     if (start < 0) {
         start = 0;
     }
-
+    LOGE("AV_PIX_FMT_YUV420P %d, AV_PIX_FMT_YA8 %d, AV_PIX_FMT_Y400A %d, AV_PIX_FMT_BGR48BE %d",
+         AV_PIX_FMT_YUV420P, AV_PIX_FMT_YA8, AV_PIX_FMT_Y400A, AV_PIX_FMT_BGR48BE);
     const char *inputC = (*env)->GetStringUTFChars(env, input, 0);
     const char *outputC = (*env)->GetStringUTFChars(env, output, 0);
 
@@ -206,5 +209,69 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jobject object, jstring input, 
 
     (*env)->ReleaseStringUTFChars(env, input, inputC);
     (*env)->ReleaseStringUTFChars(env, output, outputC);
+    return ret;
+}
+
+JNIEXPORT jlong JNICALL
+Java_cn_com_lasong_media_Muxer_init(JNIEnv *env, jobject thiz, jlong handle, jstring output, jstring format) {
+    if (handle != 0) {
+        LOGE("%ld is initialized.", handle);
+        return 0;
+    }
+    const char *outputC = (*env)->GetStringUTFChars(env, output, 0);
+    const char *formatC = (*env)->GetStringUTFChars(env, format, 0);
+    long handleNative = init(outputC, formatC);
+    (*env)->ReleaseStringUTFChars(env, output, outputC);
+    (*env)->ReleaseStringUTFChars(env, format, formatC);
+
+    jclass clz = (*env)->GetObjectClass(env, thiz);
+    jfieldID fieldId = (*env)->GetFieldID(env, clz, "nativeZMuxerContext", "J");
+    // 初始化成功
+    (*env)->SetLongField(env, thiz, fieldId, handleNative);
+    return handle;
+}
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_add_1video_1stream(JNIEnv *env, jobject thiz, jlong handle,
+                                                  jlong bit_rate, jint width, jint height,
+                                                  jint frame_rate, jint gop_size) {
+    return  add_video_stream(handle, bit_rate, width, height, frame_rate, gop_size);
+}
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_scale_1video(JNIEnv *env, jobject thiz, jlong handle, jint src_fmt,
+                                            jint src_width, jint src_height) {
+    return scale_video(handle, src_fmt, src_width, src_height);
+}
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_start(JNIEnv *env, jobject thiz, jlong handle) {
+    return start(handle);
+}
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_write_1video_1frame(JNIEnv *env, jobject thiz, jlong handle,
+                                                   jbyteArray data) {
+    jbyte *raw_data = NULL;
+    if (NULL != data) {
+        raw_data = (*env)->GetByteArrayElements(env, data, NULL);
+    }
+
+    int ret = write_video_frame(handle, (const uint8_t*)raw_data);
+
+    if (NULL != data) {
+        (*env)->ReleaseByteArrayElements(env, data, raw_data, 0);
+    }
+
+    return ret;
+}
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_stop(JNIEnv *env, jobject thiz, jlong handle) {
+    int ret = stop(handle);
+    jclass clz = (*env)->GetObjectClass(env, thiz);
+    jfieldID fieldId = (*env)->GetFieldID(env, clz, "nativeZMuxerContext", "J");
+    // 初始化成功
+    (*env)->SetLongField(env, thiz, fieldId, (jlong) 0);
     return ret;
 }

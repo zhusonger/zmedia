@@ -15,6 +15,7 @@ void clear_context(SwrContextExt *s){
         av_freep(&s->dst_buffers[0]);
     }
     av_freep(&s->dst_buffers);
+    av_freep(s);
 }
 
 void swr_ext_free(SwrContextExt **ss) {

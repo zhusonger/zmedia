@@ -13,7 +13,27 @@ extern "C" {
  * Signature: (Ljava/lang/String;Ljava/lang/String;DDZZ)I
  */
 JNIEXPORT jint JNICALL Java_cn_com_lasong_media_Muxer_remux
-        (JNIEnv *, jobject, jstring, jstring, jdouble, jdouble, jboolean, jboolean, jboolean);
+        (JNIEnv *, jclass, jstring, jstring, jdouble, jdouble, jboolean, jboolean, jboolean);
+
+JNIEXPORT jlong JNICALL
+Java_cn_com_lasong_media_Muxer_init(JNIEnv *, jobject, jlong, jstring, jstring);
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_add_1video_1stream(JNIEnv *, jobject, jlong,
+                                                  jlong, jint, jint,
+                                                  jint, jint);
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_scale_1video(JNIEnv *env, jobject, jlong, jint, jint, jint);
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_start(JNIEnv *, jobject, jlong);
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_write_1video_1frame(JNIEnv *, jobject, jlong, jbyteArray);
+
+JNIEXPORT jint JNICALL
+Java_cn_com_lasong_media_Muxer_stop(JNIEnv *env, jobject, jlong);
 
 #ifdef __cplusplus
 }

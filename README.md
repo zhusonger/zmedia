@@ -6,6 +6,35 @@
 ```
 implementation 'com.github.zhusonger:zmeida:1.1.0'
 ```
+## developing(开发中)
+
+* 更新 FFmpeg Version n4.4
+* remux剪辑方法修改为静态方法
+
+```java
+int ret = Muxer.remux(<input path>, <output path>,
+          <start seconds>, <end seconds>,
+          <metadata>, <rotate>);
+```
+
+* 新增基于ffmpeg软编实现的视频合成(音频还未实现)
+
+```java
+Muxer muxer = new Muxer();
+muxer.init("<output>");
+muxer.add_video_stream(4000_000, 1280, 720);
+// 源数据未RGBA, 源数据大小为 640x360, 会转换到编码器格式, 并放大到1280x720
+muxer.scale_video(AVPixelFormat.AV_PIX_FMT_RGBA.ordinal(), 640, 360);
+loop {
+    muxer.write_video_frame(<a frame rgba array>);
+    if (end) {
+        break;
+    }
+}
+// 写入结尾
+muxer.write_video_frame(null);
+muxer.stop();
+```
 
 ## 1.1.0
 

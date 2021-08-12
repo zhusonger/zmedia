@@ -95,7 +95,7 @@ static void _log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
 }
 
 //=======Public=========//
-long init(const char *output, const char *format)
+long init(char *output, char *format)
 {
     ZMuxContext *ctx = (ZMuxContext *)calloc(sizeof(ZMuxContext), 1);
     long handle = (long)ctx;
@@ -536,10 +536,9 @@ int stop(long handle)
         avio_closep(&oc->pb);
     /* free the stream */
     avformat_free_context(oc);
-    ctx->output = NULL;
-    ctx->format = NULL;
+    av_freep(&ctx->output);
+    av_freep(&ctx->format);
     av_freep(&ctx);
-    handle = 0;
     return ret;
 }
 

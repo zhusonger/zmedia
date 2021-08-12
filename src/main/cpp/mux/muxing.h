@@ -60,8 +60,8 @@ typedef struct OutputStream {
 typedef struct ZMuxContext
 {
     AVFormatContext *oc;
-    const char *output;
-    const char *format;
+    char *output;
+    char *format;
     
     /**
      * Whether or not avformat_init_output fully initialized streams
@@ -74,7 +74,7 @@ typedef struct ZMuxContext
 // output 输出文件路径
 // format 输出文件类型, 传NULL默认从output文件名猜测, 如果失败就默认为mp4, 可以传入指定的输出格式, 如"mp4"
 // 返回ZMuxContext句柄地址
-long init(const char *output, const char *format);
+long init(char *output, char *format);
 
 // 添加视频流
 // handle ZMuxContext句柄地址

@@ -213,17 +213,33 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jclass clz, jstring input, jstr
 }
 
 JNIEXPORT jlong JNICALL
-Java_cn_com_lasong_media_Muxer_init(JNIEnv *env, jobject thiz, jlong handle, jstring output, jstring format) {
+Java_cn_com_lasong_media_Muxer_init(JNIEnv *env, jobject thiz, jlong handle, jstring joutput, jstring jformat) {
     if (handle != 0) {
         LOGE("%ld is initialized.", handle);
         return 0;
     }
-    const char *outputC = (*env)->GetStringUTFChars(env, output, 0);
-    const char *formatC = (*env)->GetStringUTFChars(env, format, 0);
-    long handleNative = init(outputC, formatC);
-    (*env)->ReleaseStringUTFChars(env, output, outputC);
-    (*env)->ReleaseStringUTFChars(env, format, formatC);
+    if (NULL == joutput) {
+        LOGE("output is not nullable");
+        return ERROR_NO_INIT;
+    }
+    char *output = NULL;
+    char *format = NULL;
+    // copy output
+    int len_output = (*env)->GetStringUTFLength(env, joutput);
+    int len_format = NULL != jformat ? (*env)->GetStringUTFLength(env, jformat) : 0;
+    const char *c_output = (*env)->GetStringUTFChars(env, joutput, 0);
+    output = av_mallocz(len_output * sizeof(char));
+    strcpy(output, c_output);
+    (*env)->ReleaseStringUTFChars(env, joutput, c_output);
+    // copy format
+    if (len_format > 0) {
+        const char *c_format = (*env)->GetStringUTFChars(env, jformat, 0);
+        format = av_mallocz(len_format * sizeof(char));
+        strcpy(format, c_format);
+        (*env)->ReleaseStringUTFChars(env, jformat, c_format);
+    }
 
+    long handleNative = init(output, format);
     jclass clz = (*env)->GetObjectClass(env, thiz);
     jfieldID fieldId = (*env)->GetFieldID(env, clz, "nativeZMuxerContext", "J");
     // 初始化成功

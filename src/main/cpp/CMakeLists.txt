@@ -85,5 +85,5 @@ target_link_libraries( # 指定目标库
 target_link_libraries( # 指定目标库
         mux
         # 目标库到日志库的链接 包含在NDK
-        avutil avformat avcodec swscale
+        avutil avformat avcodec swscale swresample
         ${log-lib})

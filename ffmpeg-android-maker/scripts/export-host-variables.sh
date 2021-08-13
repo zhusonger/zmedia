@@ -23,7 +23,7 @@ fi
 # The variable is used as a path segment of the toolchain path
 export HOST_TAG=$HOST_TAG
 # Number of physical cores in the system to facilitate parallel assembling
-export HOST_NPROC=$HOST_NPROC
+export HOST_NPROC=10
 
 # Using CMake from the Android SDK
 export CMAKE_EXECUTABLE=${ANDROID_CMAKE_HOME}/cmake

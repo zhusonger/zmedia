@@ -30,14 +30,14 @@
  */
 
 #include "muxing.h"
-
+#include "../util/helper.h"
 //=======Private=========//
 // 生成一个存储帧数据的空间, 用于复用
 int _alloc_re_usable_picture(AVFrame **picture, enum AVPixelFormat pix_fmt, int width, int height) {
     int ret = 0;
     *picture = av_frame_alloc();
     if (!picture) {
-        fprintf(stderr, "Could not alloc video frame\n");
+        LOGE("Could not alloc video frame\n");
         ret = ERROR_OPEN_VIDEO_CODEC;
         goto end;
     }
@@ -49,7 +49,7 @@ int _alloc_re_usable_picture(AVFrame **picture, enum AVPixelFormat pix_fmt, int 
     /* allocate the buffers for the frame data */
     ret = av_frame_get_buffer(*picture, 0);
     if (ret < 0) {
-        fprintf(stderr, "Could not allocate frame data.\n");
+        LOGE("Could not allocate frame data.\n");
         ret = ERROR_OPEN_VIDEO_CODEC;
         goto end;
     }
@@ -87,7 +87,7 @@ static void _log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
 {
     AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
 
-    printf("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
+    LOGD("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
            av_ts2str(pkt->pts), av_ts2timestr(pkt->pts, time_base),
            av_ts2str(pkt->dts), av_ts2timestr(pkt->dts, time_base),
            av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, time_base),
@@ -106,7 +106,7 @@ long init(char *output, char *format)
     /* allocate the output media context */
     avformat_alloc_output_context2(&oc, NULL, NULL, output);
     if (!oc) {
-        printf("Could not deduce output format from file extension: using MP4.\n");
+        LOGD("Could not deduce output format from file extension: using MP4.\n");
         avformat_alloc_output_context2(&oc, NULL, "mp4", output);
     }
     if (!oc) {
@@ -139,21 +139,21 @@ int add_video_stream(long handle, int64_t bit_rate, int width, int height, int f
         /* find the encoder */
         AVCodec *codec = avcodec_find_encoder(codec_id);
         if (!(codec)) {
-            fprintf(stderr, "Could not find encoder for '%s'\n",
+            LOGE("Could not find encoder for '%s'\n",
                     avcodec_get_name(codec_id));
             ret = ERROR_NO_CODEC;
             goto error;
         }
         video_st->st = avformat_new_stream(oc, NULL);
         if (!video_st->st) {
-            fprintf(stderr, "Could not allocate stream\n");
+            LOGE("Could not allocate stream\n");
             ret = ERROR_NEW_STREAM;
             goto error;
         }
         video_st->st->id = oc->nb_streams-1;
         AVCodecContext *codec_context = avcodec_alloc_context3(codec);
         if (!codec_context) {
-            fprintf(stderr, "Could not alloc an encoding context\n");
+            LOGE("Could not alloc an encoding context\n");
             ret = ERROR_ALLOC_CODEC;
             goto error;
         }
@@ -164,7 +164,7 @@ int add_video_stream(long handle, int64_t bit_rate, int width, int height, int f
         /* allocate and init a re-usable frame */
         AVFrame *picture = NULL;
         if(_alloc_re_usable_picture(&picture, pix_fmt, width, height) < 0) {
-            fprintf(stderr, "Could not allocate video frame\n");
+            LOGE("Could not allocate video frame\n");
             ret = ERROR_OPEN_VIDEO_CODEC;
             goto error;
         }
@@ -223,7 +223,7 @@ int scale_video(long handle, int src_fmt, int src_width, int src_height)
     /* allocate and init a re-usable frame */
     AVFrame *picture = NULL;
     if(_alloc_re_usable_picture(&picture, src_pix_fmt, src_width, src_height) < 0) {
-        fprintf(stderr, "Could not allocate video frame\n");
+        LOGE("Could not allocate video frame\n");
         return ERROR_SCALE_VIDEO;
     }
     // 配置转换上下文
@@ -234,8 +234,7 @@ int scale_video(long handle, int src_fmt, int src_width, int src_height)
                                        SCALE_FLAGS, NULL, NULL, NULL);
     if (!sws_ctx)
     {
-        fprintf(stderr,
-                "Impossible to create scale context for the conversion "
+        LOGE("Impossible to create scale context for the conversion "
                 "fmt:%s s:%dx%d -> fmt:%s s:%dx%d\n",
                 av_get_pix_fmt_name(src_pix_fmt), src_width, src_height,
                 av_get_pix_fmt_name(dst_pix_fmt), dst_width, dst_height);
@@ -269,7 +268,7 @@ int add_audio_stream(long handle, int sample_fmt, int64_t bit_rate, int sample_r
         /* find the encoder */
         AVCodec *codec = avcodec_find_encoder(codec_id);
         if (!(codec)) {
-            fprintf(stderr, "Could not find encoder for '%s'\n",
+            LOGE("Could not find encoder for '%s'\n",
                     avcodec_get_name(codec_id));
             ret = ERROR_NO_CODEC;
             goto error;
@@ -277,7 +276,7 @@ int add_audio_stream(long handle, int sample_fmt, int64_t bit_rate, int sample_r
 
         audio_st->st = avformat_new_stream(oc, NULL);
         if (!audio_st->st) {
-            fprintf(stderr, "Could not allocate stream\n");
+            LOGE("Could not allocate stream\n");
             ret = ERROR_NEW_STREAM;
             goto error;
         }
@@ -285,7 +284,7 @@ int add_audio_stream(long handle, int sample_fmt, int64_t bit_rate, int sample_r
         audio_st->st->id = oc->nb_streams-1;
         AVCodecContext *codec_context = avcodec_alloc_context3(codec);
         if (!codec_context) {
-            fprintf(stderr, "Could not alloc an encoding context\n");
+            LOGE("Could not alloc an encoding context\n");
             ret = ERROR_ALLOC_CODEC;
             goto error;
         }
@@ -306,7 +305,7 @@ int add_audio_stream(long handle, int sample_fmt, int64_t bit_rate, int sample_r
             codec_context->sample_rate = sample_rate;
         }
         if (codec_context->sample_rate <= 0) {
-            fprintf(stderr, "Could not support sample_rate : %d\n", sample_rate);
+            LOGE("Could not support sample_rate : %d\n", sample_rate);
             ret = ERROR_SAMPLE_RATE_INVALID;
             goto error;
         }
@@ -326,7 +325,7 @@ int add_audio_stream(long handle, int sample_fmt, int64_t bit_rate, int sample_r
         }
 
         if (codec_context->channels <= 0) {
-            fprintf(stderr, "Could not support channel_layout : %llu\n", channel_layout);
+            LOGE("Could not support channel_layout : %lu\n", channel_layout);
             ret = ERROR_SAMPLE_RATE_INVALID;
             goto error;
         }
@@ -354,7 +353,7 @@ int start(long handle)
         OutputStream *video_st = ctx->video_st;
         ret = avcodec_open2(video_st->enc, video_st->enc->codec, NULL);
         if (ret < 0) {
-            fprintf(stderr, "Could not open video codec: %s\n", av_err2str(ret));
+            LOGE("Could not open video codec: %s\n", av_err2str(ret));
             ret = ERROR_OPEN_VIDEO_CODEC;
             goto end;
         }
@@ -363,7 +362,7 @@ int start(long handle)
         /* copy the stream parameters to the muxer */
         ret = avcodec_parameters_from_context(video_st->st->codecpar, video_st->enc);
         if (ret < 0) {
-            fprintf(stderr, "Could not copy the stream parameters\n");
+            LOGE("Could not copy the stream parameters\n");
             ret = ERROR_OPEN_VIDEO_CODEC;
             goto end;
         }
@@ -375,7 +374,7 @@ int start(long handle)
         OutputStream *audio_st = ctx->audio_st;
         ret = avcodec_open2(audio_st->enc, audio_st->enc->codec, NULL);
         if (ret < 0) {
-            fprintf(stderr, "Could not open audio codec: %s\n", av_err2str(ret));
+            LOGE("Could not open audio codec: %s\n", av_err2str(ret));
             ret = ERROR_OPEN_AUDIO_CODEC;
             goto end;
         }
@@ -395,7 +394,7 @@ int start(long handle)
     if (!(fmt->flags & AVFMT_NOFILE)) {
         ret = avio_open(&oc->pb, filename, AVIO_FLAG_WRITE);
         if (ret < 0) {
-            fprintf(stderr, "Could not open '%s': %s\n", filename,
+            LOGE("Could not open '%s': %s\n", filename,
                     av_err2str(ret));
             goto end;
         }
@@ -405,7 +404,7 @@ int start(long handle)
     ret = avformat_write_header(oc, NULL);
     ctx->streams_initialized = ret;
     if (ret < 0) {
-        fprintf(stderr, "Error occurred when opening output file: %s\n",
+        LOGE("Error occurred when opening output file: %s\n",
                 av_err2str(ret));
         goto end;
     } else 
@@ -421,14 +420,14 @@ int write_video_frame(long handle, const uint8_t *data) {
 
     ZMuxContext *ctx = (ZMuxContext *)handle;
     if (ctx->streams_initialized < 0) {
-        fprintf(stderr, "streams_initialized is negative : %s\n",
+        LOGE("streams_initialized is negative : %s\n",
                 av_err2str(ctx->streams_initialized));
         return ctx->streams_initialized;
     }
 
     OutputStream *video_st = ctx->video_st;
     if (video_st->eof == AVERROR_EOF) {
-        fprintf(stderr, "video_st is reach end : %s\n",
+        LOGE("video_st is reach end : %s\n",
                 av_err2str(video_st->eof));
         return video_st->eof;
     }
@@ -473,7 +472,7 @@ int write_video_frame(long handle, const uint8_t *data) {
     // send the frame to the encoder
     ret = avcodec_send_frame(codec_context, data ? video_st->frame : NULL);
     if (ret < 0) {
-        fprintf(stderr, "Error sending a frame to the encoder: %s\n",
+        LOGE("Error sending a frame to the encoder: %s\n",
                 av_err2str(ret));
         ret = ERROR_WRITE_VIDEO_FRAME;
         goto end;
@@ -486,7 +485,7 @@ int write_video_frame(long handle, const uint8_t *data) {
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             break;
         else if (ret < 0) {
-            fprintf(stderr, "Error encoding a frame: %s\n", av_err2str(ret));
+            LOGE("Error encoding a frame: %s\n", av_err2str(ret));
             ret = ERROR_WRITE_VIDEO_FRAME;
             goto end;
         }
@@ -500,7 +499,7 @@ int write_video_frame(long handle, const uint8_t *data) {
         ret = av_interleaved_write_frame(ctx->oc, &pkt);
         av_packet_unref(&pkt);
         if (ret < 0) {
-            fprintf(stderr, "Error while writing output packet: %s\n", av_err2str(ret));
+            LOGE("Error while writing output packet: %s\n", av_err2str(ret));
             ret = ERROR_WRITE_VIDEO_FRAME;
             goto end;
         }
@@ -527,7 +526,7 @@ int stop(long handle)
         * av_codec_close(). */
         av_write_trailer(oc);
     } else {
-        printf("Error occurred when opening output");
+        LOGE("Error occurred when opening output");
     }
     _close_stream(ctx, ctx->video_st);
     _close_stream(ctx, ctx->audio_st);
@@ -555,7 +554,7 @@ int stop(long handle)
 //    const char *src_size = argv[2];
 //    int src_w, src_h, dst_w, dst_h;
 //    if (av_parse_video_size(&src_w, &src_h, src_size) < 0) {
-//        fprintf(stderr,
+//        LOGE(
 //                "Invalid size '%s', must be in the form WxH or a valid size abbreviation\n",
 //                src_size);
 //        exit(1);

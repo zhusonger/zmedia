@@ -6,6 +6,13 @@
 ```
 implementation 'com.github.zhusonger:zmeida:1.1.0'
 ```
+
+## ffmpeg库
+
+这个ffmpeg相关库是基于目前的功能精简版本, 如果项目中已经有ffmpeg, 并且已经支持对应功能
+
+可以去除ffmpeg相关的库
+
 ## developing(开发中)
 
 * 更新 FFmpeg Version n4.4
@@ -18,6 +25,11 @@ int ret = Muxer.remux(<input path>, <output path>,
 ```
 
 * 新增基于ffmpeg软编实现的视频合成(音频还未实现)
+    * 新增AAC编码
+    * 新增libx264软编库
+    * 新增libmp3lame软编库
+
+    > 会增大包体, 2个常用架构总共大概8M左右(毕竟单个libx264就有2M)   
 
 ```java
 Muxer muxer = new Muxer();

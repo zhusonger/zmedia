@@ -111,7 +111,7 @@ Java_cn_com_lasong_media_Muxer_remux(JNIEnv* env,jclass clz, jstring input, jstr
             && in_stream->side_data != NULL) {
             int *sd_size=malloc(sizeof(int*));
             uint8_t* display_sd = av_stream_get_side_data(in_stream ,
-                                                          AV_PKT_DATA_DISPLAYMATRIX, (size_t *) sd_size);
+                                                          AV_PKT_DATA_DISPLAYMATRIX, (int *) sd_size);
             if (display_sd != NULL) {
                 in_stream->side_data->data = (uint8_t*) av_mallocz(
                         in_stream->side_data->size*sizeof(uint8_t*)
@@ -244,7 +244,7 @@ Java_cn_com_lasong_media_Muxer_init(JNIEnv *env, jobject thiz, jlong handle, jst
     jfieldID fieldId = (*env)->GetFieldID(env, clz, "nativeZMuxerContext", "J");
     // 初始化成功
     (*env)->SetLongField(env, thiz, fieldId, handleNative);
-    return handle;
+    return handleNative;
 }
 
 JNIEXPORT jint JNICALL

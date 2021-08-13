@@ -48,8 +48,8 @@ typedef struct OutputStream {
 
     float t, tincr, tincr2;
 
-    struct SwsContext *sws_ctx;
-    struct SwrContext *swr_ctx;
+    struct SwsContext *sws_ctx; // 视频转换
+    struct SwrContext *swr_ctx; // 音频重采样
     enum AVPixelFormat src_pix_fmt;
     int src_width;
     int src_height;

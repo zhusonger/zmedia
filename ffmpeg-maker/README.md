@@ -6,7 +6,8 @@
 * ANDROID\_SDK\_HOME和ANDROID\_NDK\_HOME放在初始脚本内
 * 新增ANDROID\_CMAKE\_HOME避免当前本机没有对应版本的CMAKE, 可以自定义
 * 修改scripts/ffmpeg/build.sh, 自定义ffmpeg配置参数, 缩小包大小
- 
+* 扩展支持iOS编译 
+* build.sh自己去修改对应系统的参数, 不带参数运行默认Android, build.sh iOS就是编译的iOS
 
 # ffmpeg-android-maker
 

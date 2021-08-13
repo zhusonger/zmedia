@@ -5,6 +5,8 @@ source ${SCRIPTS_DIR}/common-functions.sh
 # Libx264 doesn't have any versioning system. Currently it has 2 branches: master and stable.
 # Latest commit in stable branch
 # Jun 13, 2021 3:43pm GMT+0300
+# 这个是commit的SHA值, 需要更改就自己调整
+# https://code.videolan.org/videolan/x264/-/commits/master
 LIBX264_VERSION=5db6aa6cab1b146e07b60cc1736a01f21da01154
 
 downloadTarArchive \

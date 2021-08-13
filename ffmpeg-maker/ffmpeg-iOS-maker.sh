@@ -117,8 +117,14 @@ do
     cd ${!COMPONENT_SOURCES_DIR_VARIABLE}
     echo "Enter the ${COMPONENT} source dir: ${!COMPONENT_SOURCES_DIR_VARIABLE}"
 
+    sh_name=build.sh
+    if [${COMPONENT} == "ffmpeg"];then
+        sh_name=build-iOS.sh
+        echo "change ${COMPONENT} build.sh => build-iOS.sh"
+    fi
+
     # and executing the component-specific build script
-    source ${SCRIPTS_DIR}/${COMPONENT}/build.sh || exit 1
+    source ${SCRIPTS_DIR}/${COMPONENT}/${sh_name} || exit 1
 
     # Returning to the root directory. Just in case.
     cd ${BASE_DIR}

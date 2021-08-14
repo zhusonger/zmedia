@@ -9,6 +9,7 @@
 ABIS_TO_BUILD=()
 API_LEVEL=16
 SOURCE_TYPE=TAR
+# ffmpeg版本
 SOURCE_VALUE=4.4
 BINUTILS=gnu
 EXTERNAL_LIBRARIES=()
@@ -36,26 +37,47 @@ for argument in "$@"; do
   case $argument in
   # Build for only specified ABIs (separated by comma)
   --target-abis=* | -abis=*)
+    # 分解支持架构
     IFS=',' read -ra ABIS <<<"${argument#*=}"
-    for abi in "${ABIS[@]}"; do
-      case $abi in
-      x86 | x86_64 | armeabi-v7a | arm64-v8a)
-        ABIS_TO_BUILD+=("$abi")
-        ;;
-      arm)
-        ABIS_TO_BUILD+=("armeabi-v7a")
-        ;;
-      arm64)
-        ABIS_TO_BUILD+=("arm64-v8a")
-        ;;
-      *)
-        echo "Unknown ABI: $abi"
-        ;;
-      esac
-    done
+    # 根据平台配置架构
+    if [ ${COMPILE_BUILD_TARGET} == iOS ];
+    then
+        for abi in "${ABIS[@]}"; do
+          case $abi in
+          armv7 | armv7s | arm64 | i386 | x86_64)
+            ABIS_TO_BUILD+=("$abi")
+            ;;
+          *)
+            echo "Unknown ABI: $abi"
+            ;;
+          esac
+        done
+    else
+        for abi in "${ABIS[@]}"; do
+          case $abi in
+          x86 | x86_64 | armeabi-v7a | arm64-v8a)
+            ABIS_TO_BUILD+=("$abi")
+            ;;
+          arm)
+            ABIS_TO_BUILD+=("armeabi-v7a")
+            ;;
+          arm64)
+            ABIS_TO_BUILD+=("arm64-v8a")
+            ;;
+          *)
+            echo "Unknown ABI: $abi"
+            ;;
+          esac
+        done
+    fi
+
     ;;
   # Use this value as Android platform version during compilation.
   --android-api-level=* | -android=*)
+    API_LEVEL="${argument#*=}"
+    ;;
+  # Use this value as iOS platform version during compilation.
+  --iOS-api-level=* | -iOS=*)
     API_LEVEL="${argument#*=}"
     ;;
   # Checkout the particular tag in the FFmpeg's git repository
@@ -138,7 +160,12 @@ done
 # The x86 is the first, because it is more likely to have Text Relocations.
 # In this case the rest ABIs will not be assembled at all.
 if [ ${#ABIS_TO_BUILD[@]} -eq 0 ]; then
-  ABIS_TO_BUILD=("x86" "x86_64" "armeabi-v7a" "arm64-v8a")
+    if [ ${COMPILE_BUILD_TARGET} == iOS ];
+    then
+        ABIS_TO_BUILD=("x86_64", "armv7", "armv7s", "arm64", "i386")
+    else
+        ABIS_TO_BUILD=("x86" "x86_64" "armeabi-v7a" "arm64-v8a")
+    fi
 fi
 # The FFmpeg will be build for ABIs in this list
 export FFMPEG_ABIS_TO_BUILD=${ABIS_TO_BUILD[@]}
@@ -155,3 +182,5 @@ export FFMPEG_EXTERNAL_LIBRARIES=${EXTERNAL_LIBRARIES[@]}
 # Will be replaced with 21 for 64bit ABIs if the value is less than 21
 export DESIRED_ANDROID_API_LEVEL=${API_LEVEL}
 export DESIRED_BINUTILS=${BINUTILS}
+# 额外配置IOS的参数,目标版本
+export DESIRED_IOS_API_LEVEL=${API_LEVEL}

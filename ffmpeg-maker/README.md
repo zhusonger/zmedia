@@ -1,13 +1,27 @@
 # Android FFMpeg生成修改
 
 * 引用自ffmpeg-android-maker
- <https://github.com/Javernaut/ffmpeg-android-maker>
- 
+    * <https://github.com/Javernaut/ffmpeg-android-maker>
 * ANDROID\_SDK\_HOME和ANDROID\_NDK\_HOME放在初始脚本内
 * 新增ANDROID\_CMAKE\_HOME避免当前本机没有对应版本的CMAKE, 可以自定义
 * 修改scripts/ffmpeg/build.sh, 自定义ffmpeg配置参数, 缩小包大小
-* 扩展支持iOS编译 
+* 扩展支持iOS编译, 参考
+    * <https://www.debugger.wiki/article/html/1553068800846281>
+    * <https://github.com/kewlbear/FFmpeg-iOS-build-script> 
+    * <https://github.com/yixia/FFmpeg-Vitamio/blob/vitamio/build_ios.sh>
+    * <https://github.com/bbcallen/ijkplayer/blob/fc70895c64cbbd20f32f1d81d2d48609ed13f597/ios/tools/do-compile-ffmpeg.sh>
+    
 * build.sh自己去修改对应系统的参数, 不带参数运行默认Android, build.sh iOS就是编译的iOS
+
+
+    ```sh
+    # Android下面2个都可以
+    ./build.sh
+    ./build.sh Android
+    
+    # iOS
+    ./build iOS
+    ```
 
 # ffmpeg-android-maker
 

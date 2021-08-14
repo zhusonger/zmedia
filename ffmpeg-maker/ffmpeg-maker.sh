@@ -18,10 +18,22 @@ export SCRIPTS_DIR=${BASE_DIR}/scripts
 # All FFmpeg's libraries and headers are copied there
 export OUTPUT_DIR=${BASE_DIR}/output
 
-# 配置自己电脑上的SDK&NDK路径, CMAKE用于生成so库, NDK交叉编译
-export ANDROID_SDK_HOME=~/Documents/Dev/android-sdk-macosx
-export ANDROID_NDK_HOME=$ANDROID_SDK_HOME/ndk/21.3.6528147
-export ANDROID_CMAKE_HOME=$ANDROID_SDK_HOME/cmake/3.10.2.4988404/bin
+
+FFMPEG_LIB_SUFFIX=".so"
+FFMPEG_BUILD_SH="build-android.sh"
+# 配置下编译环境路径
+if [ ${COMPILE_BUILD_TARGET} == iOS ];
+then
+    export XCODE_DEVELOPER_HOME=/Applications/Xcode.app/Contents/Developer
+    export IOS_SDK_VERSION=14.5
+    FFMPEG_BUILD_SH="build-iOS.sh"
+    FFMPEG_LIB_SUFFIX=".a"
+else
+    # 配置自己电脑上的SDK&NDK路径, CMAKE用于生成so库, NDK交叉编译
+    export ANDROID_SDK_HOME=~/Documents/Dev/android-sdk-macosx
+    export ANDROID_NDK_HOME=$ANDROID_SDK_HOME/ndk/21.3.6528147
+    export ANDROID_CMAKE_HOME=$ANDROID_SDK_HOME/cmake/3.10.2.4988404/bin
+fi
 
 # Check the host machine for proper setup and fail fast otherwise
 ${SCRIPTS_DIR}/check-host-machine.sh || exit 1
@@ -34,16 +46,16 @@ export BUILD_DIR_FFMPEG=$BUILD_DIR/ffmpeg
 # to make easier referencing them when FFmpeg is being built.
 export BUILD_DIR_EXTERNAL=$BUILD_DIR/external
 
-# Function that copies *.so files and headers of the current ANDROID_ABI
+# Function that copies *.so files and headers of the current PLATFORM_ABI
 # to the proper place inside OUTPUT_DIR
 function prepareOutput() {
-  OUTPUT_LIB=${OUTPUT_DIR}/lib/${ANDROID_ABI}
+  OUTPUT_LIB=${OUTPUT_DIR}/lib/${PLATFORM_ABI}
   mkdir -p ${OUTPUT_LIB}
-  cp ${BUILD_DIR_FFMPEG}/${ANDROID_ABI}/lib/*.so ${OUTPUT_LIB}
+  cp ${BUILD_DIR_FFMPEG}/${PLATFORM_ABI}/lib/*${FFMPEG_LIB_SUFFIX} ${OUTPUT_LIB}
 
-  OUTPUT_HEADERS=${OUTPUT_DIR}/include/${ANDROID_ABI}
+  OUTPUT_HEADERS=${OUTPUT_DIR}/include/${PLATFORM_ABI}
   mkdir -p ${OUTPUT_HEADERS}
-  cp -r ${BUILD_DIR_FFMPEG}/${ANDROID_ABI}/include/* ${OUTPUT_HEADERS}
+  cp -r ${BUILD_DIR_FFMPEG}/${PLATFORM_ABI}/include/* ${OUTPUT_HEADERS}
 }
 
 # Saving stats about text relocation presence.
@@ -51,8 +63,8 @@ function prepareOutput() {
 # Otherwise the whole script is interrupted
 function checkTextRelocations() {
   TEXT_REL_STATS_FILE=${STATS_DIR}/text-relocations.txt
-  ${FAM_READELF} --dynamic ${BUILD_DIR_FFMPEG}/${ANDROID_ABI}/lib/*.so | grep 'TEXTREL\|File' >> ${TEXT_REL_STATS_FILE}
-
+  # 根据平台修改库后缀
+  ${FAM_READELF} --dynamic ${BUILD_DIR_FFMPEG}/${PLATFORM_ABI}/lib/*.${LIB_SUFFIX} | grep 'TEXTREL\|File' >> ${TEXT_REL_STATS_FILE}
   if grep -q TEXTREL ${TEXT_REL_STATS_FILE}; then
     echo "There are text relocations in output files:"
     cat ${TEXT_REL_STATS_FILE}
@@ -118,9 +130,9 @@ do
     echo "Enter the ${COMPONENT} source dir: ${!COMPONENT_SOURCES_DIR_VARIABLE}"
 
     sh_name=build.sh
-    if [${COMPONENT} == "ffmpeg"];then
-        sh_name=build-iOS.sh
-        echo "change ${COMPONENT} build.sh => build-iOS.sh"
+    if [ ${COMPONENT} == "ffmpeg" ];then
+        sh_name=${FFMPEG_BUILD_SH}
+        echo "change ${COMPONENT} build.sh => ${FFMPEG_BUILD_SH}"
     fi
 
     # and executing the component-specific build script
@@ -130,7 +142,9 @@ do
     cd ${BASE_DIR}
   done
 
-  checkTextRelocations || exit 1
-
+  # Android才检查
+  if [ ${COMPILE_BUILD_TARGET} == Android ];then
+      checkTextRelocations || exit 1
+  fi
   prepareOutput
 done

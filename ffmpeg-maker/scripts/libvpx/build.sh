@@ -2,7 +2,7 @@
 
 VPX_AS=${FAM_AS}
 
-case $ANDROID_ABI in
+case $PLATFORM_ABI in
   x86)
     EXTRA_BUILD_FLAGS="--target=x86-android-gcc --disable-sse4_1 --disable-avx --disable-avx2 --disable-avx512"
     VPX_AS=${FAM_YASM}
@@ -40,8 +40,7 @@ NM=${FAM_NM} \
     --enable-better-hw-compatibility \
     --enable-vp8 \
     --enable-vp9 \
-    --enable-static \
-    --disable-shared \
+    ${COMPILE_LIB_FLAGS} \
     --disable-ccache \
     --disable-debug \
     --disable-gprof \

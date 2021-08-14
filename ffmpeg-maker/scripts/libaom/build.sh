@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 # libaom doesn't support building while being in its root directory
-CMAKE_BUILD_DIR=aom_build_${ANDROID_ABI}
+CMAKE_BUILD_DIR=aom_build_${PLATFORM_ABI}
 rm -rf ${CMAKE_BUILD_DIR}
 mkdir ${CMAKE_BUILD_DIR}
 cd ${CMAKE_BUILD_DIR}
 
 ${CMAKE_EXECUTABLE} .. \
  -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
- -DANDROID_ABI=${ANDROID_ABI} \
+ -DPLATFORM_ABI=${PLATFORM_ABI} \
  -DCMAKE_TOOLCHAIN_FILE=${SCRIPTS_DIR}/libaom/android.cmake \
  -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR} \
  -DCONFIG_PIC=1 \

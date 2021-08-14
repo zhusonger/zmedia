@@ -3,7 +3,7 @@
 # The Wavpack may reqire libiconv for proper work
 # Consider building it and passing via --with-iconv
 
-if [[ $ANDROID_ABI = "arm64-v8a" ]]; then
+if [[ $PLATFORM_ABI = "arm64-v8a" ]]; then
   ADDITIONAL_FLAGS=--disable-asm
 fi
 

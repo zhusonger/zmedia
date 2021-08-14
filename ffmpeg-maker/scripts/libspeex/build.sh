@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ADDITIONAL_FLAGS=
-if [[ $ANDROID_ABI = "x86" ]] || [[ $ANDROID_ABI = "x86_64" ]]; then
+if [[ $PLATFORM_ABI = "x86" ]] || [[ $PLATFORM_ABI = "x86_64" ]]; then
   ADDITIONAL_FLAGS=--enable-sse
 fi
 

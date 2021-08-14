@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CROSS_FILE_NAME=crossfile-${ANDROID_ABI}.meson
+CROSS_FILE_NAME=crossfile-${PLATFORM_ABI}.meson
 
 rm ${CROSS_FILE_NAME}
 
@@ -26,7 +26,7 @@ endian = 'little'
 prefix = '${INSTALL_DIR}'
 EOF
 
-BUILD_DIRECTORY=build/${ANDROID_ABI}
+BUILD_DIRECTORY=build/${PLATFORM_ABI}
 
 rm -rf ${BUILD_DIRECTORY}
 

@@ -4,7 +4,7 @@ X264_AS=${FAM_CC}
 
 X264_ADDITIONAL_FLAGS=
 
-case $ANDROID_ABI in
+case $PLATFORM_ABI in
   x86)
     # Disabling assembler optimizations due to text relocations
     X264_ADDITIONAL_FLAGS=--disable-asm
@@ -33,7 +33,10 @@ STRIP=${FAM_STRIP} \
     --disable-opencl \
     --chroma-format=all \
     --bit-depth=all \
-    ${X264_ADDITIONAL_FLAGS} || exit 1
+    --extra-cflags="${EXTRA_C_FLAGS}" \
+    --extra-asflags="${EXTRA_AS_FLAGS}" \
+    --extra-ldflags="${EXTRA_LD_FLAGS}" \
+    ${X264_ADDITIONAL_FLAGS}  || exit 1
 
 ${MAKE_EXECUTABLE} clean
 ${MAKE_EXECUTABLE} -j${HOST_NPROC}

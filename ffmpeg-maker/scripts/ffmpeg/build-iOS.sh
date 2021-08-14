@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 
-case $ANDROID_ABI in
-  x86)
+case $PLATFORM_ABI in
+  i386 | x86_64)
     # Disabling assembler optimizations, because they have text relocations
-    EXTRA_BUILD_CONFIGURATION_FLAGS=--disable-asm
+    EXTRA_BUILD_CONFIGURATION_FLAGS="$EXTRA_BUILD_CONFIGURATION_FLAGS --disable-asm"
+    EXTRA_BUILD_CONFIGURATION_FLAGS="$EXTRA_BUILD_CONFIGURATION_FLAGS --disable-mmx"
+    EXTRA_BUILD_CONFIGURATION_FLAGS="$EXTRA_BUILD_CONFIGURATION_FLAGS --assert-level=2"
     ;;
-  x86_64)
-    EXTRA_BUILD_CONFIGURATION_FLAGS=--x86asmexe=${FAM_YASM}
+    *)
+    EXTRA_BUILD_CONFIGURATION_FLAGS="$EXTRA_BUILD_CONFIGURATION_FLAGS --disable-asm"
+    EXTRA_BUILD_CONFIGURATION_FLAGS="$EXTRA_BUILD_CONFIGURATION_FLAGS --disable-debug"
+    EXTRA_BUILD_CONFIGURATION_FLAGS="$EXTRA_BUILD_CONFIGURATION_FLAGS --enable-pic"
+    EXTRA_BUILD_CONFIGURATION_FLAGS="$EXTRA_BUILD_CONFIGURATION_FLAGS --enable-neon"
+    EXTRA_BUILD_CONFIGURATION_FLAGS="$EXTRA_BUILD_CONFIGURATION_FLAGS --enable-optimizations"
+    if [ "$PLATFORM_ABI" = "arm64" ]
+    then
+        EXPORT="GASPP_FIX_XCODE5=1"
+    fi
     ;;
 esac
 
@@ -22,15 +32,15 @@ do
 done
 
 # Referencing dependencies without pkgconfig
-DEP_CFLAGS="-I${BUILD_DIR_EXTERNAL}/${ANDROID_ABI}/include"
-DEP_LD_FLAGS="-L${BUILD_DIR_EXTERNAL}/${ANDROID_ABI}/lib $FFMPEG_EXTRA_LD_FLAGS"
+DEP_CFLAGS="$EXTRA_C_FLAGS -I${BUILD_DIR_EXTERNAL}/${PLATFORM_ABI}/include"
+DEP_LD_FLAGS="$EXTRA_LD_FLAGS -L${BUILD_DIR_EXTERNAL}/${PLATFORM_ABI}/lib $FFMPEG_EXTRA_LD_FLAGS"
 
 # 配置选项:
 # disable 关闭 enable开启
 # --disable-static 与 --enable-shared成对使用
 # static 表示生产.a静态库 shared表示生成.so动态库
-COMMON_OPTIONS="$COMMON_OPTIONS --disable-static"
-COMMON_OPTIONS="$COMMON_OPTIONS --enable-shared"
+COMMON_OPTIONS="$COMMON_OPTIONS --enable-static"
+COMMON_OPTIONS="$COMMON_OPTIONS --disable-shared"
 
 # 程序选项
 COMMON_OPTIONS="$COMMON_OPTIONS --disable-programs"
@@ -104,12 +114,12 @@ COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=gif"
 COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=hevc"
 
 ## 支持Anroid硬解码部分
-COMMON_OPTIONS="$COMMON_OPTIONS --enable-mediacodec"
-COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=h264_mediacodec"
-COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=mpeg4_mediacodec"
-COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=vp9_mediacodec"
-COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=vp8_mediacodec"
-COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=hevc_mediacodec"
+# COMMON_OPTIONS="$COMMON_OPTIONS --enable-mediacodec"
+# COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=h264_mediacodec"
+# COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=mpeg4_mediacodec"
+# COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=vp9_mediacodec"
+# COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=vp8_mediacodec"
+# COMMON_OPTIONS="$COMMON_OPTIONS --enable-decoder=hevc_mediacodec"
 
 # 编码器
 ## =====> 音频
@@ -137,7 +147,7 @@ COMMON_OPTIONS="$COMMON_OPTIONS --enable-demuxer=gif"
 COMMON_OPTIONS="$COMMON_OPTIONS --enable-demuxer=wav"
 
 # 外部库支持:
-COMMON_OPTIONS="$COMMON_OPTIONS --enable-jni"
+# COMMON_OPTIONS="$COMMON_OPTIONS --enable-jni"
 
 # Toolchain options:
 COMMON_OPTIONS="$COMMON_OPTIONS --enable-cross-compile"
@@ -148,12 +158,6 @@ COMMON_OPTIONS="$COMMON_OPTIONS --disable-symver"
 
 # 优化选项:
 COMMON_OPTIONS="$COMMON_OPTIONS --enable-fast-unaligned"
-COMMON_OPTIONS="$COMMON_OPTIONS --disable-asm"
-
-# 开发者选项
-COMMON_OPTIONS="$COMMON_OPTIONS --disable-debug"
-COMMON_OPTIONS="$COMMON_OPTIONS --enable-optimizations"
-
 
 # 优化大小
 COMMON_OPTIONS="$COMMON_OPTIONS --enable-small"
@@ -161,8 +165,8 @@ COMMON_OPTIONS="$COMMON_OPTIONS --disable-runtime-cpudetect"
 COMMON_OPTIONS="$COMMON_OPTIONS --disable-autodetect"
 
 ./configure \
-  --prefix=${BUILD_DIR_FFMPEG}/${ANDROID_ABI} \
-  --target-os=android \
+  --prefix=${BUILD_DIR_FFMPEG}/${PLATFORM_ABI} \
+  --target-os=darwin \
   --arch=${TARGET_TRIPLE_MACHINE_BINUTILS} \
   --sysroot=${SYSROOT_PATH} \
   --cc=${FAM_CC} \
@@ -182,4 +186,4 @@ COMMON_OPTIONS="$COMMON_OPTIONS --disable-autodetect"
 
 ${MAKE_EXECUTABLE} clean
 ${MAKE_EXECUTABLE} -j${HOST_NPROC}
-${MAKE_EXECUTABLE} install
+${MAKE_EXECUTABLE} install $EXPORT

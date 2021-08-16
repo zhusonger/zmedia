@@ -46,6 +46,7 @@ export BUILD_DIR_FFMPEG=$BUILD_DIR/ffmpeg
 # to make easier referencing them when FFmpeg is being built.
 export BUILD_DIR_EXTERNAL=$BUILD_DIR/external
 
+
 # Function that copies *.so files and headers of the current PLATFORM_ABI
 # to the proper place inside OUTPUT_DIR
 function prepareOutput() {
@@ -64,7 +65,7 @@ function prepareOutput() {
 function checkTextRelocations() {
   TEXT_REL_STATS_FILE=${STATS_DIR}/text-relocations.txt
   # 根据平台修改库后缀
-  ${FAM_READELF} --dynamic ${BUILD_DIR_FFMPEG}/${PLATFORM_ABI}/lib/*.${LIB_SUFFIX} | grep 'TEXTREL\|File' >> ${TEXT_REL_STATS_FILE}
+  ${FAM_READELF} --dynamic ${BUILD_DIR_FFMPEG}/${PLATFORM_ABI}/lib/*${FFMPEG_LIB_SUFFIX} | grep 'TEXTREL\|File' >> ${TEXT_REL_STATS_FILE}
   if grep -q TEXTREL ${TEXT_REL_STATS_FILE}; then
     echo "There are text relocations in output files:"
     cat ${TEXT_REL_STATS_FILE}

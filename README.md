@@ -7,11 +7,16 @@
 implementation 'com.github.zhusonger:zmeida:1.1.0'
 ```
 
-## ffmpeg库
+## ffmpeg-marker
 
 这个ffmpeg相关库是基于目前的功能精简版本, 如果项目中已经有ffmpeg, 并且已经支持对应功能
 
 可以去除ffmpeg相关的库
+
+基于[ffmpeg-android-maker](https://github.com/Javernaut/ffmpeg-android-maker)修改的ffmpeg编译脚本
+
+支持了iOS的编译
+
 
 ## developing(开发中)
 

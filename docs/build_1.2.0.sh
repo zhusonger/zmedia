@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-case $ANDROID_ABI in
+case $PLATFORM_ABI in
   x86)
     # Disabling assembler optimizations, because they have text relocations
     EXTRA_BUILD_CONFIGURATION_FLAGS=--disable-asm
@@ -22,8 +22,8 @@ do
 done
 
 # Referencing dependencies without pkgconfig
-DEP_CFLAGS="-I${BUILD_DIR_EXTERNAL}/${ANDROID_ABI}/include"
-DEP_LD_FLAGS="-L${BUILD_DIR_EXTERNAL}/${ANDROID_ABI}/lib $FFMPEG_EXTRA_LD_FLAGS"
+DEP_CFLAGS="-I${BUILD_DIR_EXTERNAL}/${PLATFORM_ABI}/include"
+DEP_LD_FLAGS="-L${BUILD_DIR_EXTERNAL}/${PLATFORM_ABI}/lib $FFMPEG_EXTRA_LD_FLAGS"
 
 # 配置选项:
 # disable 关闭 enable开启
@@ -161,7 +161,7 @@ COMMON_OPTIONS="$COMMON_OPTIONS --disable-runtime-cpudetect"
 COMMON_OPTIONS="$COMMON_OPTIONS --disable-autodetect"
 
 ./configure \
-  --prefix=${BUILD_DIR_FFMPEG}/${ANDROID_ABI} \
+  --prefix=${BUILD_DIR_FFMPEG}/${PLATFORM_ABI} \
   --target-os=android \
   --arch=${TARGET_TRIPLE_MACHINE_BINUTILS} \
   --sysroot=${SYSROOT_PATH} \

@@ -88,7 +88,10 @@ source ${SCRIPTS_DIR}/parse-arguments.sh
 
 # Treating FFmpeg as just a module to build after its dependencies
 COMPONENTS_TO_BUILD=${EXTERNAL_LIBRARIES[@]}
-COMPONENTS_TO_BUILD+=( "ffmpeg" )
+if [ "$BUILD_FFMPEG" = true ] ; then
+  echo "Append ffmpeg to COMPONENTS_TO_BUILD"
+  COMPONENTS_TO_BUILD+=( "ffmpeg" )
+fi
 
 # Get the source code of component to build
 for COMPONENT in ${COMPONENTS_TO_BUILD[@]}

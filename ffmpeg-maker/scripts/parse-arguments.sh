@@ -14,7 +14,7 @@ SOURCE_VALUE=4.4
 BINUTILS=gnu
 EXTERNAL_LIBRARIES=()
 FFMPEG_GPL_ENABLED=false
-
+BUILD_FFMPEG=true
 # All FREE libraries that are supported
 SUPPORTED_LIBRARIES_FREE=(
   "libaom"
@@ -25,7 +25,8 @@ SUPPORTED_LIBRARIES_FREE=(
   "libspeex"
   "libvpx"
   "libfreetype"
-  "libfribidi"
+  "libfribidi",
+  "libopenssl"
 )
 
 # All GPL libraries that are supported
@@ -138,6 +139,9 @@ for argument in "$@"; do
   --enable-libfribidi | -fribidi)
     EXTERNAL_LIBRARIES+=("libfribidi")
     ;;
+  --enable-libopenssl | -openssl)
+    EXTERNAL_LIBRARIES+=("libopenssl")
+    ;;
   --enable-libx264 | -x264)
     EXTERNAL_LIBRARIES+=("libx264")
     FFMPEG_GPL_ENABLED=true
@@ -148,6 +152,9 @@ for argument in "$@"; do
   --enable-all-gpl | -all-gpl)
     EXTERNAL_LIBRARIES+=" ${SUPPORTED_LIBRARIES_GPL[@]}"
     FFMPEG_GPL_ENABLED=true
+    ;;
+  --disable-ffmpeg)
+    BUILD_FFMPEG=false
     ;;
   *)
     echo "Unknown argument $argument"
@@ -184,3 +191,4 @@ export DESIRED_ANDROID_API_LEVEL=${API_LEVEL}
 export DESIRED_BINUTILS=${BINUTILS}
 # 额外配置IOS的参数,目标版本
 export DESIRED_IOS_API_LEVEL=${API_LEVEL}
+export BUILD_FFMPEG=${BUILD_FFMPEG}

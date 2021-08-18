@@ -16,7 +16,7 @@ JNIEXPORT jint JNICALL Java_cn_com_lasong_media_Muxer_remux
         (JNIEnv *, jclass, jstring, jstring, jdouble, jdouble, jboolean, jboolean, jboolean);
 
 JNIEXPORT jlong JNICALL
-Java_cn_com_lasong_media_Muxer_init(JNIEnv *, jobject, jlong, jstring, jstring);
+Java_cn_com_lasong_media_Muxer_init(JNIEnv *, jobject, jlong, jstring/*, jstring*/);
 
 JNIEXPORT jint JNICALL
 Java_cn_com_lasong_media_Muxer_add_1video_1stream(JNIEnv *, jobject, jlong,

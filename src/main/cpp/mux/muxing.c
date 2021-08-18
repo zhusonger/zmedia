@@ -31,9 +31,56 @@
 
 #include "muxing.h"
 #include "../util/helper.h"
+#include <libavutil/avassert.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/opt.h>
+#include <libavutil/mathematics.h>
+#include <libavutil/timestamp.h>
+#include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
+#include <libswresample/swresample.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/parseutils.h>
+
+// a wrapper around a single output AVStream
+typedef struct OutputStream {
+    AVStream *st;
+    AVCodecContext *enc; // codec context
+
+    /* pts of the next frame that will be generated */
+    int64_t next_pts;
+    int samples_count;
+
+    AVFrame *frame;
+    AVFrame *tmp_frame;
+
+    float t, tincr, tincr2;
+
+    struct SwsContext *sws_ctx; // 视频转换
+    struct SwrContext *swr_ctx; // 音频重采样
+    enum AVPixelFormat src_pix_fmt;
+    int src_width;
+    int src_height;
+    int eof;
+} OutputStream;
+
+// a muxer
+typedef struct ZMuxContext
+{
+    AVFormatContext *oc;
+    char *output;
+//    char *format;
+
+    /**
+     * Whether or not avformat_init_output fully initialized streams
+     */
+    int streams_initialized;
+
+    OutputStream *video_st, *audio_st;
+} ZMuxContext;
 //=======Private=========//
 // 生成一个存储帧数据的空间, 用于复用
-int _alloc_re_usable_picture(AVFrame **picture, enum AVPixelFormat pix_fmt, int width, int height) {
+int p_alloc_re_usable_picture(AVFrame **picture, enum AVPixelFormat pix_fmt, int width, int height) {
     int ret = 0;
     *picture = av_frame_alloc();
     if (!picture) {
@@ -59,7 +106,7 @@ end:
 }
 
 // 关闭流并释放相关数据
-void _close_stream(ZMuxContext *ctx, OutputStream *stream)
+void p_close_stream(ZMuxContext *ctx, OutputStream *stream)
 {
     if (NULL != stream)
     {
@@ -83,30 +130,31 @@ void _close_stream(ZMuxContext *ctx, OutputStream *stream)
     }
 }
 
-static void _log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
+static void p_log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt)
 {
+    return;
     AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
 
     LOGD("pts:%s pts_time:%s dts:%s dts_time:%s duration:%s duration_time:%s stream_index:%d\n",
-           av_ts2str(pkt->pts), av_ts2timestr(pkt->pts, time_base),
-           av_ts2str(pkt->dts), av_ts2timestr(pkt->dts, time_base),
-           av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, time_base),
-           pkt->stream_index);
+                        av_ts2str(pkt->pts), av_ts2timestr(pkt->pts, time_base),
+                        av_ts2str(pkt->dts), av_ts2timestr(pkt->dts, time_base),
+                        av_ts2str(pkt->duration), av_ts2timestr(pkt->duration, time_base),
+                        pkt->stream_index);
 }
 
 //=======Public=========//
-long init(char *output, char *format)
+long init(char *output/*, char *format*/)
 {
     ZMuxContext *ctx = (ZMuxContext *)calloc(sizeof(ZMuxContext), 1);
     long handle = (long)ctx;
     ctx->output = output;
-    ctx->format = format;
+//    ctx->format = format;
     ctx->streams_initialized = -1;
     AVFormatContext *oc;
     /* allocate the output media context */
     avformat_alloc_output_context2(&oc, NULL, NULL, output);
     if (!oc) {
-        LOGD("Could not deduce output format from file extension: using MP4.\n");
+        LOGE("Could not deduce output format from file extension: using MP4.\n");
         avformat_alloc_output_context2(&oc, NULL, "mp4", output);
     }
     if (!oc) {
@@ -163,7 +211,7 @@ int add_video_stream(long handle, int64_t bit_rate, int width, int height, int f
             codec->pix_fmts[0] : STREAM_PIX_FMT;
         /* allocate and init a re-usable frame */
         AVFrame *picture = NULL;
-        if(_alloc_re_usable_picture(&picture, pix_fmt, width, height) < 0) {
+        if(p_alloc_re_usable_picture(&picture, pix_fmt, width, height) < 0) {
             LOGE("Could not allocate video frame\n");
             ret = ERROR_OPEN_VIDEO_CODEC;
             goto error;
@@ -188,7 +236,7 @@ int add_video_stream(long handle, int64_t bit_rate, int width, int height, int f
 error:
     // 出错就释放stream
     if(ret != 0) {
-        _close_stream(ctx, video_st);
+        p_close_stream(ctx, video_st);
         ctx->video_st = NULL;
     }
 
@@ -222,7 +270,7 @@ int scale_video(long handle, int src_fmt, int src_width, int src_height)
     }
     /* allocate and init a re-usable frame */
     AVFrame *picture = NULL;
-    if(_alloc_re_usable_picture(&picture, src_pix_fmt, src_width, src_height) < 0) {
+    if(p_alloc_re_usable_picture(&picture, src_pix_fmt, src_width, src_height) < 0) {
         LOGE("Could not allocate video frame\n");
         return ERROR_SCALE_VIDEO;
     }
@@ -335,7 +383,7 @@ int add_audio_stream(long handle, int sample_fmt, int64_t bit_rate, int sample_r
     error:
     // 出错就释放stream
     if(ret != 0) {
-        _close_stream(ctx, audio_st);
+        p_close_stream(ctx, audio_st);
         ctx->audio_st = NULL;
     }
     return ret;
@@ -482,8 +530,12 @@ int write_video_frame(long handle, const uint8_t *data) {
         AVPacket pkt = { 0 };
 
         ret = avcodec_receive_packet(codec_context, &pkt);
-        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            if (ret == AVERROR(EAGAIN)) {
+                ret = 0;
+            }
             break;
+        }
         else if (ret < 0) {
             LOGE("Error encoding a frame: %s\n", av_err2str(ret));
             ret = ERROR_WRITE_VIDEO_FRAME;
@@ -495,7 +547,7 @@ int write_video_frame(long handle, const uint8_t *data) {
         pkt.stream_index = video_st->st->index;
 
         /* Write the compressed frame to the media file. */
-        _log_packet(ctx->oc, &pkt);
+        p_log_packet(ctx->oc, &pkt);
         ret = av_interleaved_write_frame(ctx->oc, &pkt);
         av_packet_unref(&pkt);
         if (ret < 0) {
@@ -528,15 +580,15 @@ int stop(long handle)
     } else {
         LOGE("Error occurred when opening output");
     }
-    _close_stream(ctx, ctx->video_st);
-    _close_stream(ctx, ctx->audio_st);
+    p_close_stream(ctx, ctx->video_st);
+    p_close_stream(ctx, ctx->audio_st);
     if (NULL != fmt && !(fmt->flags & AVFMT_NOFILE))
         /* Close the output file. */
         avio_closep(&oc->pb);
     /* free the stream */
     avformat_free_context(oc);
     av_freep(&ctx->output);
-    av_freep(&ctx->format);
+//    av_freep(&ctx->format);
     av_freep(&ctx);
     return ret;
 }

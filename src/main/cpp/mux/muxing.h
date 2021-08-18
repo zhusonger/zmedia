@@ -3,17 +3,6 @@
 #include <string.h>
 #include <math.h>
 
-#include <libavutil/avassert.h>
-#include <libavutil/channel_layout.h>
-#include <libavutil/opt.h>
-#include <libavutil/mathematics.h>
-#include <libavutil/timestamp.h>
-#include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
-#include <libswresample/swresample.h>
-#include <libavutil/imgutils.h>
-#include <libavutil/parseutils.h>
-
 #define STREAM_DURATION   10.0
 #define STREAM_FRAME_RATE 25 /* 25 images/s */
 #define STREAM_PIX_FMT    AV_PIX_FMT_YUV420P /* default pix_fmt */
@@ -34,47 +23,11 @@
 #define ERROR_WRITE_VIDEO_FRAME -11
 #define ERROR_WRITE_AUDIO_FRAME -12
 
-// a wrapper around a single output AVStream
-typedef struct OutputStream {
-    AVStream *st;
-    AVCodecContext *enc; // codec context
-
-    /* pts of the next frame that will be generated */
-    int64_t next_pts;
-    int samples_count;
-
-    AVFrame *frame;
-    AVFrame *tmp_frame;
-
-    float t, tincr, tincr2;
-
-    struct SwsContext *sws_ctx; // 视频转换
-    struct SwrContext *swr_ctx; // 音频重采样
-    enum AVPixelFormat src_pix_fmt;
-    int src_width;
-    int src_height;
-    int eof;
-} OutputStream;
-
-// a muxer
-typedef struct ZMuxContext
-{
-    AVFormatContext *oc;
-    char *output;
-    char *format;
-    
-    /**
-     * Whether or not avformat_init_output fully initialized streams
-     */
-    int streams_initialized;
-    
-    OutputStream *video_st, *audio_st;
-} ZMuxContext;
 
 // output 输出文件路径
 // format 输出文件类型, 传NULL默认从output文件名猜测, 如果失败就默认为mp4, 可以传入指定的输出格式, 如"mp4"
 // 返回ZMuxContext句柄地址
-long init(char *output, char *format);
+long init(char *output/*, char *format*/);
 
 // 添加视频流
 // handle ZMuxContext句柄地址

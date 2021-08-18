@@ -8,8 +8,11 @@ package cn.com.lasong.media;
  */
 public class Muxer {
     static {
-        System.loadLibrary("avformat");
-        System.loadLibrary("avcodec");
+        System.loadLibrary("avutil"); // 工具类
+        System.loadLibrary("avformat"); // 格式
+        System.loadLibrary("avcodec"); // 编码器
+        System.loadLibrary("swscale"); // 视频转换,大小,格式
+        System.loadLibrary("swresample"); // 音频重采样, 还未做
         System.loadLibrary("mux");
     }
 
@@ -35,23 +38,20 @@ public class Muxer {
      * 初始化合成器
      * 重复初始化只会生效第一次, 除非stop之后再次调用init
      * @param output 输出文件路径
-     * @param format 文件的格式, 如mp4, 不传从路径猜测, 猜测失败默认使用mp4
+//     * @param format 文件的格式, 如mp4, 不传从路径猜测, 猜测失败默认使用mp4
      * @return
      */
-    public native long init(long handle, String output, String format);
+    public native long init(long handle, String output/*, String format*/);
     public long init(String output) {
-        return init(nativeZMuxerContext, output, null);
-    }
-    public long init(String output, String format) {
-        return init(nativeZMuxerContext, output, format);
+        return init(nativeZMuxerContext, output/*, null*/);
     }
 
     /**
      * 添加视频流
      * @param handle init方法返回的处理上下文句柄地址
      * @param bit_rate 码率
-     * @param width 输出宽
-     * @param height 输出高
+     * @param width 输出宽, 不能为奇数
+     * @param height 输出高, 不能为奇数
      * @param frame_rate 输出帧率
      * @param gop_size 输出GOP
      * @return 成功0, 小于0 失败

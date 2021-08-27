@@ -462,7 +462,7 @@ end:
 }
 
 
-int write_video_frame(long handle, const uint8_t *data) {
+int _write_video_frame(long handle, const uint8_t *data, int end_stream) {
     if (handle == 0)
         return ERROR_NO_INIT;
 
@@ -516,9 +516,12 @@ int write_video_frame(long handle, const uint8_t *data) {
     }
 
     video_st->frame->pts = video_st->next_pts++;
-
-    // send the frame to the encoder
-    ret = avcodec_send_frame(codec_context, data ? video_st->frame : NULL);
+    // 有数据或者结尾, 写入编码器
+    if (data || end_stream) {
+        // send the frame to the encoder
+        // 有数据且不是结尾, 写入帧数据, 否则结束
+        ret = avcodec_send_frame(codec_context, (data && !end_stream) ? video_st->frame : NULL);
+    }
     if (ret < 0) {
         LOGE("Error sending a frame to the encoder: %s\n",
                 av_err2str(ret));
@@ -530,10 +533,8 @@ int write_video_frame(long handle, const uint8_t *data) {
         AVPacket pkt = { 0 };
 
         ret = avcodec_receive_packet(codec_context, &pkt);
-        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-            if (ret == AVERROR(EAGAIN)) {
-                ret = 0;
-            }
+        if ((!end_stream && ret == AVERROR(EAGAIN)) || ret == AVERROR_EOF) {
+            ret = 0;
             break;
         }
         else if (ret < 0) {
@@ -561,10 +562,17 @@ end:
     return ret;    
 }
 
+int write_video_frame(long handle, const uint8_t *data) {
+    return _write_video_frame(handle, data, 0);
+}
+
 int stop(long handle)
 {
     if (handle == 0)
         return ERROR_NO_INIT;
+
+    // 写入最后一帧
+    _write_video_frame(handle, NULL, 1);
 
     ZMuxContext *ctx = (ZMuxContext *)handle;
     int ret = ctx->streams_initialized;

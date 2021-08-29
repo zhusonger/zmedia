@@ -147,7 +147,7 @@ do
   done
 
   # Android才检查
-  if [ ${COMPILE_BUILD_TARGET} == Android ];then
+  if [ ${COMPILE_BUILD_TARGET} == Android ] && [ "$BUILD_FFMPEG" = true ];then
       checkTextRelocations || exit 1
   fi
   prepareOutput

@@ -95,8 +95,8 @@ public class MEGLHelper {
         int redSize = 8;
         int greenSize = 8;
         int blueSize = 8;
-        int alphaSize = 8;
-        int depthSize = 16;
+        int alphaSize = 0;
+        int depthSize = 0;
         int stencilSize = 0;
         mConfigSpec = new int[] {
                 EGL14.EGL_RED_SIZE, redSize,
@@ -134,56 +134,16 @@ public class MEGLHelper {
             throw new RuntimeException("eglInitialize failed");
         }
 
+        EGLConfig[] configs = new EGLConfig[1];
         int[] num_config = new int[1];
         if (!EGL14.eglChooseConfig(mEglDisplay, mConfigSpec,
-                0, null, 0, 0,
+                0, configs, 0, 1,
                 num_config, 0)) {
             checkError();
             throw new IllegalArgumentException("eglChooseConfig failed");
         }
 
-        int numConfigs = num_config[0];
-
-        if (numConfigs <= 0) {
-            checkError();
-            throw new IllegalArgumentException(
-                    "No configs match configSpec");
-        }
-
-        EGLConfig[] configs = new EGLConfig[numConfigs];
-        if (!EGL14.eglChooseConfig(mEglDisplay, mConfigSpec, 0, configs, 0, numConfigs,
-                num_config, 0)) {
-            checkError();
-            throw new IllegalArgumentException("eglChooseConfig#2 failed");
-        }
-
-
-        for (EGLConfig config : configs) {
-            int d = findConfigAttrib(mEglDisplay, config,
-                    EGL14.EGL_DEPTH_SIZE);
-            int s = findConfigAttrib(mEglDisplay, config,
-                    EGL14.EGL_STENCIL_SIZE);
-            if ((d >= mDepthSize) && (s >= mStencilSize)) {
-                int r = findConfigAttrib(mEglDisplay, config,
-                        EGL14.EGL_RED_SIZE);
-                int g = findConfigAttrib(mEglDisplay, config,
-                        EGL14.EGL_GREEN_SIZE);
-                int b = findConfigAttrib(mEglDisplay, config,
-                        EGL14.EGL_BLUE_SIZE);
-                int a = findConfigAttrib(mEglDisplay, config,
-                        EGL14.EGL_ALPHA_SIZE);
-                if ((r == mRedSize) && (g == mGreenSize)
-                        && (b == mBlueSize) && (a == mAlphaSize)) {
-                    mEglConfig = config;
-                    break;
-                }
-            }
-        }
-
-        if (mEglConfig == null) {
-            checkError();
-            throw new IllegalArgumentException("No config chosen");
-        }
+        mEglConfig = configs[0];
 
         int[] attrib_list = { EGL14.EGL_CONTEXT_CLIENT_VERSION, glVersion,
                 EGL14.EGL_NONE };
